@@ -4,7 +4,8 @@ config_version=5
 
 config/name="Abyss Hunter"
 config/features=PackedStringArray("4.7", "GL Compatibility")
-; run/main_scene is unset: /dev-story or the developer sets it once a scene exists.
+; The dive test scene until Story 006 adds the real game scene.
+run/main_scene="res://src/diver/dive_test.tscn"
 
 [rendering]
 

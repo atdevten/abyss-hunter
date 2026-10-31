@@ -48,9 +48,7 @@ naming:
   scenes: snake_case
 
 commands:
-  # TODO: godot is not on PATH here — set the editor's full path via /settings
-  # TODO: no export preset exists yet — create one in the editor, then set build via /settings
-  build: "[TO BE CONFIGURED]"
+  build: "godot --headless --export-release \"Web\" build/web/index.html"
   test: "godot --headless -s -d --remote-debug tcp://127.0.0.1:0 res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests --ignoreHeadlessMode"
   run: "godot --path . --windowed --resolution 1280x720"
   smoke: "godot --headless --quit-after 5"

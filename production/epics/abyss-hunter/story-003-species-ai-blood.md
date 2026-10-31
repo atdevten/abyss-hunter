@@ -1,7 +1,7 @@
 # Story 003: Six species, three AI types and blood lure
 
 > **Epic**: abyss-hunter
-> **Status**: In Progress
+> **Status**: Complete
 > **Layer**: Core
 > **Type**: Integration
 > **Estimate**: L
@@ -100,3 +100,10 @@ N/A (minimal — no control manifest)
 
 - Depends on: `production/epics/abyss-hunter/story-002-harpoon-camera-flash.md`
 - Unlocks: `production/epics/abyss-hunter/story-004-depth-layers-lamp.md`, `production/epics/abyss-hunter/story-005-encyclopedia.md`
+
+## Completion Notes
+**Completed**: 2026-10-31 (closed over a NOT ASSESSED verdict, user accepted the deviations)
+**Criteria**: 6/9 covered (AC-1, 2, 4, 5, 8, 9). Untested criteria: AC-3 (shark leaving / charging, seen only in programmer's headless runs), AC-6 (shark bite on diver, same), AC-7 (knowledge on/off playtest note `production/qa/evidence/shark-fight-knowledge-on-off.md` still owed)
+**Deviations**: Story 004 edited this story's creature files after the evidence screenshots (stamp reports CHANGED). Open design questions: shark does not retaliate when harpooned; squid has no warning display; knowledge lengthens the display (1.2 s off, 3.0 s on); two gill shots kill the shark; wander uses unseeded randf()
+**Test Evidence**: waived at qa.level minimal; screenshots in `production/qa/evidence/story-003-species-ai-blood/` (01-shark-display-lure-knowledge-on.png, 02-all-six-species.png, 03-gill-shot-display-flash.png, stamp.txt)
+**Reviewed by**: self, no independent review
