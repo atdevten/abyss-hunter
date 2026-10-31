@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="EncyclopediaEntry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/encyclopedia/encyclopedia_entry.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+species_id = &"pufferfish"
+display_name = "Pufferfish"
+first_half_name = "Behaviour"
+behaviour_text = "Drifts slowly and ignores the diver. Easy prey, but a wounded pufferfish bleeds and the blood brings sharks."
+weak_spot_text = "Soft belly under the spines: a harpoon there deals extra damage."

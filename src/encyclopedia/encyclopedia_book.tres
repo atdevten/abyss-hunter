@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="EncyclopediaBook" load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://src/encyclopedia/encyclopedia_entry.gd" id="1"]
+[ext_resource type="Script" path="res://src/encyclopedia/encyclopedia_book.gd" id="2"]
+[ext_resource type="Resource" path="res://src/encyclopedia/entries/sardine.tres" id="3"]
+[ext_resource type="Resource" path="res://src/encyclopedia/entries/pufferfish.tres" id="4"]
+[ext_resource type="Resource" path="res://src/encyclopedia/entries/lanternfish.tres" id="5"]
+[ext_resource type="Resource" path="res://src/encyclopedia/entries/grey_reef_shark.tres" id="6"]
+[ext_resource type="Resource" path="res://src/encyclopedia/entries/atolla_jelly.tres" id="7"]
+[ext_resource type="Resource" path="res://src/encyclopedia/entries/giant_squid.tres" id="8"]
+
+[resource]
+script = ExtResource("2")
+entries = Array[ExtResource("1")]([ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8")])
+win_message = "Encyclopedia complete: all six species known. You win!"

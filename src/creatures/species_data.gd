@@ -108,7 +108,7 @@ enum BodyShape { FISH, PUFFER, JELLY, SQUID }
 @export var lure_arrive_distance: float = 40.0
 
 @export_group("Knowledge")
-## Extra display seconds while encyclopedia knowledge is on (the warning reads earlier).
+## Extra display seconds once the species' warning half is unlocked (the warning reads earlier).
 @export var knowledge_display_extra_time: float = 0.0
 
 @export_group("Look")

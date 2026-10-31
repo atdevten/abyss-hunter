@@ -11,6 +11,11 @@ extends Area2D
 ## [method take_damage] multiplies the damage by [member SpeciesData.weak_spot_multiplier]
 ## when it was in the weak spot, spawns a [BloodLure] at the hit point if the species
 ## bleeds, and starts the hit flash if the species flashes (Atolla).
+## Story 005 advantages, read per species from [member CreatureContext.encyclopedia]:
+## an unlocked weak-spot half rings the weak spot; an unlocked behaviour half
+## highlights a predator's warning display (with its charge/leave rings) or shows
+## its attack radius, and gives prey a behaviour hint (flee ring that lights up while
+## fleeing, heading arrow).
 ## A species with [member SpeciesData.glow_radius] > 0 carries its own [GlowLight]
 ## (bioluminescence, the only light in a dark layer with the lamp off); a hit flash
 ## brightens it.
@@ -34,6 +39,21 @@ const GROUP := &"creatures"
 const FACING_DEADZONE := 4.0
 ## Extra glow energy at the start of a hit flash, as a multiple of the glow energy (visual).
 const FLASH_GLOW_BOOST := 3.0
+# Story 005 advantage cues (visual placeholder art).
+const WEAK_SPOT_COLOR := Color(1.0, 0.9, 0.1, 0.9)
+const WARNING_HIGHLIGHT_COLOR := Color(1.0, 0.85, 0.1, 0.35)
+## Warning highlight radius as a multiple of the body length.
+const WARNING_HIGHLIGHT_SCALE := 0.75
+const CHARGE_RING_COLOR := Color(1.0, 0.2, 0.2, 0.7)
+const LEAVE_RING_COLOR := Color(0.3, 1.0, 0.4, 0.7)
+const AGGRO_RING_COLOR := Color(1.0, 0.3, 0.3, 0.25)
+const FLEE_RING_COLOR := Color(0.5, 0.9, 1.0, 0.25)
+const FLEE_RING_ALERT_COLOR := Color(0.5, 0.9, 1.0, 0.7)
+const HEADING_ARROW_COLOR := Color(0.5, 0.9, 1.0, 0.8)
+## Heading arrow length in pixels per px/s of velocity.
+const HEADING_ARROW_SCALE := 0.4
+## Behaviours in which a prey's flee ring is drawn as alerted.
+const ALERT_BEHAVIOURS: Array[StringName] = [&"flee", &"school_tight", &"lamp_scared"]
 
 ## Emitted when the AI switches behaviour (e.g. a predator's [code]display[/code]).
 signal behaviour_changed(creature: Creature, behaviour: StringName)
@@ -170,6 +190,10 @@ func take_damage(amount: float) -> void:
 
 
 func _draw() -> void:
+	var knows_behaviour: bool = context.encyclopedia.is_unlocked(species_id, Encyclopedia.Half.BEHAVIOUR)
+	var is_predator: bool = species.ai_kind == SpeciesData.AiKind.PREDATOR
+	if knows_behaviour and is_predator and display_pose:
+		draw_circle(Vector2.ZERO, species.body_size.x * WARNING_HIGHLIGHT_SCALE, WARNING_HIGHLIGHT_COLOR)
 	if _flash_left > 0.0:
 		var glow: float = _flash_left / species.flash_on_hit_duration
 		draw_circle(Vector2.ZERO, species.flash_radius * (1.5 - 0.5 * glow), Color(0.3, 0.6, 1.0, 0.45 * glow))
@@ -183,12 +207,23 @@ func _draw() -> void:
 			_draw_jelly()
 		SpeciesData.BodyShape.SQUID:
 			_draw_squid()
-	if context.knowledge_enabled and species.weak_spot_radius > 0.0:
-		draw_circle(species.weak_spot_offset, species.weak_spot_radius, Color(1.0, 0.9, 0.1, 0.9), false, 2.0)
+	if species.weak_spot_radius > 0.0 and context.encyclopedia.is_unlocked(species_id, Encyclopedia.Half.WEAK_SPOT):
+		draw_circle(species.weak_spot_offset, species.weak_spot_radius, WEAK_SPOT_COLOR, false, 2.0)
 	draw_set_transform(Vector2.ZERO)
-	if context.knowledge_enabled and display_pose:
-		draw_circle(Vector2.ZERO, species.charge_distance, Color(1.0, 0.2, 0.2, 0.7), false, 2.0)
-		draw_circle(Vector2.ZERO, species.leave_distance, Color(0.3, 1.0, 0.4, 0.7), false, 2.0)
+	if not knows_behaviour:
+		return
+	if is_predator and display_pose:
+		draw_circle(Vector2.ZERO, species.body_size.x * WARNING_HIGHLIGHT_SCALE, WEAK_SPOT_COLOR, false, 2.0)
+		draw_circle(Vector2.ZERO, species.charge_distance, CHARGE_RING_COLOR, false, 2.0)
+		draw_circle(Vector2.ZERO, species.leave_distance, LEAVE_RING_COLOR, false, 2.0)
+	elif is_predator:
+		draw_circle(Vector2.ZERO, species.aggro_radius, AGGRO_RING_COLOR, false, 1.0)
+	else:
+		if species.aggro_radius > 0.0:
+			draw_circle(Vector2.ZERO, species.aggro_radius, FLEE_RING_ALERT_COLOR if behaviour in ALERT_BEHAVIOURS else FLEE_RING_COLOR, false, 1.0)
+		var tip: Vector2 = velocity * HEADING_ARROW_SCALE
+		draw_line(Vector2.ZERO, tip, HEADING_ARROW_COLOR, 2.0)
+		draw_circle(tip, 2.5, HEADING_ARROW_COLOR)
 
 
 ## Fish body from a spine: in the display pose the back arches, the snout tilts up

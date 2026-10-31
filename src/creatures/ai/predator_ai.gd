@@ -14,8 +14,9 @@ extends CreatureAI
 ## charge --charge_max_time passed (miss)--> recover
 ## [/codeblock]
 ## The display (snout up, pectoral fins down, back arched) is drawn by the creature
-## while [member Creature.display_pose] is set. With encyclopedia knowledge on, the
-## display lasts [member SpeciesData.knowledge_display_extra_time] longer.
+## while [member Creature.display_pose] is set. With the species' warning half
+## unlocked in the [Encyclopedia], the display lasts
+## [member SpeciesData.knowledge_display_extra_time] longer.
 ## Flash lures ([FlashLure], Story 004) are blood lures to this AI.
 ## Behaviour names reported: [code]patrol, lured, display, charge, recover, leave,
 ## follow_prey, lamp_scared[/code].
@@ -36,7 +37,7 @@ const STATE_NAMES: Dictionary[State, StringName] = {
 
 var _state: State = State.PATROL
 var _state_time: float = 0.0
-## Display length fixed when the display starts, so toggling knowledge mid-display does not jump.
+## Display length fixed when the display starts, so a commit mid-display does not jump.
 var _display_time: float = 0.0
 
 
@@ -104,7 +105,7 @@ func _enter(state: State) -> void:
 	creature.display_pose = state == State.DISPLAY
 	if state == State.DISPLAY:
 		_display_time = creature.species.display_duration
-		if creature.context.knowledge_enabled:
+		if creature.context.encyclopedia.is_unlocked(creature.species_id, Encyclopedia.Half.BEHAVIOUR):
 			_display_time += creature.species.knowledge_display_extra_time
 	creature.set_behaviour(STATE_NAMES[state])
 

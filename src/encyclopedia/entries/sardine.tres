@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="EncyclopediaEntry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/encyclopedia/encyclopedia_entry.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+species_id = &"sardine"
+display_name = "Sardine"
+first_half_name = "Behaviour"
+behaviour_text = "Schools in the bright layer and scatters from the diver or a predator that comes close. In dim water a white lamp draws the school in."
+weak_spot_text = "No weak spot: one harpoon hit lands it, but its blood draws predators from far around."

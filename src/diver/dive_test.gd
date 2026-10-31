@@ -5,12 +5,21 @@ extends Node2D
 ## Not the game's main scene. Prints, with a time stamp: diver death, harpoon shots
 ## and hits, photos, flashes, every creature behaviour change (shark display, charge,
 ## leave...), damage, blood lures (which predators are in range) and their fading,
-## diver hits, the knowledge switch, layer changes, lamp toggles and flash lures.
+## diver hits, layer changes, lamp toggles and flash lures, and (Story 005) the
+## encyclopedia: photo/kill recorded, committed N, discarded N, completed (win).
+## Keys: L lamp, E encyclopedia screen, B stands in for "reached the boat" (commits
+## pending halves; the boat is Story 006). Diver death discards pending halves.
 ## Debug user args (after `--`):
 ##   --start-depth=<meters>   start the dive below the surface
 ##   --auto-fire              fire and photograph at the shark whenever reloaded (aims
-##                            at its weak spot when knowledge is on, its center when off)
-##   --knowledge=on|off       encyclopedia advantages (default off); the K key toggles it
+##                            at its weak spot when that half is unlocked, else its center)
+##   --unlock=<spec>          halves unlocked at the start (recorded, then committed).
+##                            spec: all | none | <species_id>:<half>,... with half
+##                            behaviour | weak_spot | both. all = 6/6 -> win state
+##   --pending=<spec>         halves recorded but not yet brought to the boat (same spec)
+##   --show-encyclopedia      open the encyclopedia screen at the start
+##   --boat-at=<seconds>      reach the boat (commit) at that time
+##   --die-at=<seconds>       kill the diver at that time (discards pending)
 ##   --all-species            also spawn sardine and lanternfish schools, an Atolla
 ##                            jelly and a giant squid
 ##   --shark-demo=<mode>      scripted diver for an unattended run:
@@ -18,8 +27,8 @@ extends Node2D
 ##       charge  swim at the shark, push in once it displays -> it charges and bites
 ##       hold    swim at the shark, then stay put -> display runs out -> charge
 ##       lure    harpoon the pufferfish -> blood lure; a near shark is lured, a far one is not
-##       weak    shark below the diver, auto-fire at it: a body shot with knowledge off,
-##               a gill shot with knowledge on
+##       weak    shark below the diver, auto-fire at it: a body shot, or a gill shot
+##               with grey_reef_shark:weak_spot unlocked
 ##       gills   shark at the diver's depth, facing it; auto-fire head-on into the gills
 ##   --layer=bright|dim|dark  start inside that layer with its species instead of the
 ##                            shark and pufferfish: bright sardines + pufferfish; dim
@@ -35,6 +44,14 @@ const LANTERNFISH: SpeciesData = preload("res://src/creatures/species/lanternfis
 const ATOLLA_JELLY: SpeciesData = preload("res://src/creatures/species/atolla_jelly.tres")
 const GIANT_SQUID: SpeciesData = preload("res://src/creatures/species/giant_squid.tres")
 const OCEAN_SCENE: PackedScene = preload("res://src/world/ocean.tscn")
+const ENCYCLOPEDIA_BOOK: EncyclopediaBook = preload("res://src/encyclopedia/encyclopedia_book.tres")
+const ENCYCLOPEDIA_SCREEN_SCENE: PackedScene = preload("res://src/encyclopedia/encyclopedia_screen.tscn")
+const BOAT_KEY := KEY_B
+const UNLOCK_HALVES: Dictionary[String, Array] = {
+	"behaviour": [Encyclopedia.Half.BEHAVIOUR],
+	"weak_spot": [Encyclopedia.Half.WEAK_SPOT],
+	"both": [Encyclopedia.Half.BEHAVIOUR, Encyclopedia.Half.WEAK_SPOT],
+}
 
 # Scene layout, in pixels relative to the diver's start (layout only, not tuning).
 const SHARK_OFFSET := Vector2(320.0, 120.0)
@@ -83,6 +100,9 @@ var _demo_phase_time: float = 0.0
 var _ocean: DepthLayers
 var _lamp: Lamp
 var _flash_demo_pending: bool = false
+var _encyclopedia: Encyclopedia
+var _boat_at: float = INF
+var _die_at: float = INF
 
 
 func _ready() -> void:
@@ -90,6 +110,11 @@ func _ready() -> void:
 	_diver.config = load("res://src/diver/diver_config.tres")
 	add_child(_diver)
 	_context = CreatureContext.new(_diver)
+	_encyclopedia = Encyclopedia.new(ENCYCLOPEDIA_BOOK)
+	_context.encyclopedia = _encyclopedia
+	var unlock_spec: String = "none"
+	var pending_spec: String = "none"
+	var show_encyclopedia := false
 	_ocean = OCEAN_SCENE.instantiate()
 	_ocean.diver = _diver
 	_lamp = Lamp.new()
@@ -104,8 +129,16 @@ func _ready() -> void:
 			_diver.position.y = arg.trim_prefix("--start-depth=").to_float() * _diver.config.pixels_per_meter
 		elif arg == "--auto-fire":
 			_auto_fire = true
-		elif arg.begins_with("--knowledge="):
-			_context.knowledge_enabled = arg.trim_prefix("--knowledge=") == "on"
+		elif arg.begins_with("--unlock="):
+			unlock_spec = arg.trim_prefix("--unlock=")
+		elif arg.begins_with("--pending="):
+			pending_spec = arg.trim_prefix("--pending=")
+		elif arg == "--show-encyclopedia":
+			show_encyclopedia = true
+		elif arg.begins_with("--boat-at="):
+			_boat_at = arg.trim_prefix("--boat-at=").to_float()
+		elif arg.begins_with("--die-at="):
+			_die_at = arg.trim_prefix("--die-at=").to_float()
 		elif arg == "--all-species":
 			all_species = true
 		elif arg.begins_with("--shark-demo="):
@@ -147,19 +180,32 @@ func _ready() -> void:
 	var hud := VitalsHud.new()
 	layer.add_child(hud)
 	hud.bind(_diver.vitals)
+	hud.bind_encyclopedia(_encyclopedia)
+	var screen: EncyclopediaScreen = ENCYCLOPEDIA_SCREEN_SCENE.instantiate()
+	layer.add_child(screen)
+	screen.bind(_encyclopedia)
+	_encyclopedia.completed.connect(func() -> void:
+		_log("encyclopedia completed %d/%d: WIN - %s" % [_encyclopedia.completed_count(), ENCYCLOPEDIA_BOOK.entries.size(), ENCYCLOPEDIA_BOOK.win_message]))
 	_diver.vitals.diver_died.connect(func(cause: DiverVitals.Cause) -> void:
-		_log("diver_died: %s" % DiverVitals.Cause.keys()[cause]))
+		_log("diver_died: %s" % DiverVitals.Cause.keys()[cause])
+		_log("encyclopedia: discarded %d pending halves" % _encyclopedia.discard_pending()))
 	_gun.harpoon_fired.connect(func(harpoon: Harpoon) -> void:
 		_log("harpoon_fired from %s" % harpoon.global_position)
 		harpoon.harpoon_lost.connect(func() -> void: _log("harpoon_lost")))
 	_gun.target_hit.connect(func(target: CollisionObject2D, is_weak_spot: bool) -> void:
 		_log("target_hit: %s weak_spot=%s" % [target.name, is_weak_spot]))
 	_camera_tool.photo_taken.connect(func(species_id: StringName) -> void:
-		_log("photo_taken: %s" % species_id))
+		_log("photo_taken: %s" % species_id)
+		if _encyclopedia.record_photo(species_id):
+			_log("encyclopedia: photo recorded, %s behaviour half pending" % species_id))
 	_camera_tool.flash_fired.connect(func(flash_position: Vector2) -> void:
 		_log("flash_fired at %s" % flash_position)
 		_ocean.spawn_flash_lure(flash_position))
-	_log("knowledge: %s" % ("on" if _context.knowledge_enabled else "off"))
+	if unlock_spec != "none":
+		_record_spec(unlock_spec)
+		_reach_boat()
+	_record_spec(pending_spec)
+	screen.visible = screen.visible or show_encyclopedia
 	match _demo:
 		"leave", "charge", "hold":
 			_demo_shark = _spawn(SHARK, DEMO_SHARK_OFFSET, "Shark")
@@ -196,22 +242,48 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	_elapsed += delta
+	if _elapsed >= _boat_at:
+		_boat_at = INF
+		_reach_boat()
+	if _elapsed >= _die_at:
+		_die_at = INF
+		_diver.vitals.take_damage(_diver.vitals.config.max_health)
 	if _flash_demo_pending and _elapsed >= FLASH_DEMO_DELAY:
 		_flash_demo_pending = false
 		_camera_tool.take_photo(_diver.global_position + FLASH_DEMO_OFFSET)
 	if _demo_shark and is_instance_valid(_demo_shark):
 		_run_approach_demo(delta)
 	if _auto_fire and is_instance_valid(_auto_target):
-		var aim: Vector2 = _auto_target.get_weak_spot_global_position() if _context.knowledge_enabled else _auto_target.global_position
+		var aim: Vector2 = _auto_target.get_weak_spot_global_position() if _encyclopedia.is_unlocked(_auto_target.species_id, Encyclopedia.Half.WEAK_SPOT) else _auto_target.global_position
 		_gun.fire_at(aim)
 		_camera_tool.take_photo(_auto_target.global_position)
 
 
 func _unhandled_input(event: InputEvent) -> void:
 	var key := event as InputEventKey
-	if key and key.pressed and not key.echo and key.physical_keycode == KEY_K:
-		_context.knowledge_enabled = not _context.knowledge_enabled
-		_log("knowledge: %s" % ("on" if _context.knowledge_enabled else "off"))
+	if key and key.pressed and not key.echo and key.physical_keycode == BOAT_KEY:
+		_reach_boat()
+
+
+## Debug stand-in for Story 006's boat: commits every pending half.
+func _reach_boat() -> void:
+	_log("encyclopedia: reached the boat, committed %d halves (%d/%d complete)" % [_encyclopedia.commit_pending(), _encyclopedia.completed_count(), ENCYCLOPEDIA_BOOK.entries.size()])
+
+
+## Records the halves named by an --unlock / --pending spec (see the header) as
+## photos and kills, so they become pending.
+func _record_spec(spec: String) -> void:
+	if spec == "none":
+		return
+	for item in spec.split(",", false):
+		var parts: PackedStringArray = item.split(":")
+		var ids: Array = ENCYCLOPEDIA_BOOK.entries.map(func(entry: EncyclopediaEntry) -> StringName: return entry.species_id) if parts[0] == "all" else [StringName(parts[0])]
+		for species_id: StringName in ids:
+			for half: Encyclopedia.Half in UNLOCK_HALVES["both" if parts[0] == "all" else parts[1]]:
+				if half == Encyclopedia.Half.BEHAVIOUR:
+					_encyclopedia.record_photo(species_id)
+				else:
+					_encyclopedia.record_kill(species_id)
 
 
 func _spawn(species: SpeciesData, offset: Vector2, creature_name: String) -> Creature:
@@ -230,7 +302,11 @@ func _spawn(species: SpeciesData, offset: Vector2, creature_name: String) -> Cre
 		_ocean.spawn_flash_lure(who.global_position))
 	creature.struck_diver.connect(func(who: Creature, damage: float) -> void:
 		_log("%s struck the diver for %.0f, diver health %.0f" % [who.name, damage, _diver.vitals.health]))
-	creature.died.connect(func(who: Creature) -> void: _log("%s died" % who.name))
+	creature.died.connect(func(who: Creature) -> void:
+		_log("%s died" % who.name)
+		# Only the harpoon calls take_damage, so every creature death is a kill.
+		if _encyclopedia.record_kill(who.species_id):
+			_log("encyclopedia: kill recorded, %s weak spot half pending" % who.species_id))
 	add_child(creature)
 	return creature
 

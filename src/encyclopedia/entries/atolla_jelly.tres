@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="EncyclopediaEntry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/encyclopedia/encyclopedia_entry.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+species_id = &"atolla_jelly"
+display_name = "Atolla jellyfish"
+first_half_name = "Behaviour"
+behaviour_text = "Drifts in the dark and pays the lamp no mind. When struck it flashes blue, and the flash draws predators."
+weak_spot_text = "The top of the bell: a harpoon there deals extra damage."

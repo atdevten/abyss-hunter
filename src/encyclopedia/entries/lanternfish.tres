@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="EncyclopediaEntry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/encyclopedia/encyclopedia_entry.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+species_id = &"lanternfish"
+display_name = "Lanternfish"
+first_half_name = "Behaviour"
+behaviour_text = "Schools in the dim layer and flees threats. When a predator is near, the school packs tightly together. Swarms a white lamp."
+weak_spot_text = "No weak spot: a small, quick catch."

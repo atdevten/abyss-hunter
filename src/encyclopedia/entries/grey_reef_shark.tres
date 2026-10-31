@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="EncyclopediaEntry" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/encyclopedia/encyclopedia_entry.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+species_id = &"grey_reef_shark"
+display_name = "Grey reef shark"
+first_half_name = "Warning sign"
+behaviour_text = "Before it charges it arches its back, lifts its snout and drops its pectoral fins. Back off and it leaves; push in and it charges."
+weak_spot_text = "The gills behind the head: a harpoon there deals heavy damage."

@@ -1,25 +1,27 @@
 class_name CreatureContext
 extends RefCounted
 ## World state shared by every creature in a dive: the diver they react to,
-## the encyclopedia-knowledge switch, and (Story 004) the depth layers and the
-## diver's lamp. Injected into each [Creature] by its spawner,
-## so flipping [member knowledge_enabled] affects all creatures at once.
-## Implements Story 003 (production/epics/abyss-hunter/story-003-species-ai-blood.md).
+## the session's [Encyclopedia] (Story 005: which advantages are unlocked per
+## species), and (Story 004) the depth layers and the diver's lamp. Injected into
+## each [Creature] by its spawner, so a commit at the boat affects all creatures at once.
+## Implements Story 003 (production/epics/abyss-hunter/story-003-species-ai-blood.md)
+## and Story 005 (production/epics/abyss-hunter/story-005-encyclopedia.md).
 ##
 ## Usage:
 ## [codeblock]
 ## var context := CreatureContext.new(diver)
 ## creature.context = context
-## context.knowledge_enabled = true   # Story 005 drives this; here a debug switch
+## context.encyclopedia = encyclopedia   # required: creatures read their advantages from it
 ## context.depth_layers = ocean          # optional: without both, no lamp reactions
 ## context.lamp = lamp
 ## [/codeblock]
 
 ## The diver creatures flee from or hunt. Predators damage it through [member Diver.vitals].
 var diver: Diver
-## When true the player has the encyclopedia advantages: weak spots are shown,
-## a predator's display shows its charge/leave lines and lasts longer.
-var knowledge_enabled: bool = false
+## The session's unlock state. Must be set before creatures enter the tree. An
+## UNLOCKED BEHAVIOUR half highlights a predator's warning (and lengthens its display)
+## or shows a prey's behaviour hint; an UNLOCKED WEAK_SPOT half marks the weak spot.
+var encyclopedia: Encyclopedia
 ## The ocean's layers; the diver's current layer decides the lamp reaction. Optional.
 var depth_layers: DepthLayers
 ## The diver's lamp. Optional.
