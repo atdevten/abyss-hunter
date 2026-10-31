@@ -1,0 +1,7 @@
+Reviewed-Content-Hash: src/diver/diver_config.gd c6d615864545ba065183c3c2c04a813a3fa2d0d5
+Reviewed-Content-Hash: src/diver/diver_config.tres 3b37d5375b58ca08a8cb19577f91c9008580d58c
+Reviewed-Content-Hash: src/diver/diver_vitals.gd 71e50a84d70ed8037f62f1e19c75d92df22867b1
+Reviewed-Content-Hash: src/diver/diver.gd 8dc1168d9af589eab93543b2a435f44d58738b38
+Reviewed-Content-Hash: src/diver/vitals_hud.gd d744396d824647c12460c2879e0bd844f5010438
+Reviewed-Content-Hash: src/diver/dive_test.gd ee09c5dc19bb97761dc50e3ddce7df56d963decf
+Reviewed-Content-Hash: src/diver/dive_test.tscn 53476102199f523ed26763efbe8e7098f5a6c42f

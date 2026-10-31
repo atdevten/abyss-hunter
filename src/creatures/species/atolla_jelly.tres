@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="SpeciesData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/creatures/species_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+species_id = &"atolla_jelly"
+display_name = "Atolla jellyfish"
+ai_kind = 0
+speed = 25.0
+health = 40.0
+sell_value = 120
+acceleration = 30.0
+cruise_speed_fraction = 0.6
+wander_radius = 50.0
+wander_retarget_time = 5.0
+weak_spot_offset = Vector2(0, -6)
+weak_spot_radius = 7.0
+weak_spot_multiplier = 1.5
+flash_on_hit_duration = 1.2
+flash_radius = 90.0
+body_shape = 2
+body_size = Vector2(40, 28)
+color = Color(0.55, 0.08, 0.12, 1)

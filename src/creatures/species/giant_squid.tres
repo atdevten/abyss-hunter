@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="SpeciesData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/creatures/species_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+species_id = &"giant_squid"
+display_name = "Giant squid"
+ai_kind = 2
+speed = 140.0
+health = 220.0
+damage = 45.0
+sell_value = 600
+aggro_radius = 240.0
+acceleration = 200.0
+cruise_speed_fraction = 0.3
+wander_radius = 140.0
+wander_retarget_time = 5.0
+weak_spot_offset = Vector2(16, -5)
+weak_spot_radius = 12.0
+weak_spot_multiplier = 2.0
+blood_lure_radius = 400.0
+blood_lure_duration = 10.0
+display_duration = 0.0
+charge_speed_multiplier = 2.0
+charge_max_time = 2.0
+attack_reach = 72.0
+recover_time = 3.0
+leave_time = 4.0
+lure_arrive_distance = 50.0
+body_shape = 3
+body_size = Vector2(130, 36)
+color = Color(0.55, 0.15, 0.2, 1)

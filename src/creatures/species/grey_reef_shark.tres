@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="SpeciesData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/creatures/species_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+species_id = &"grey_reef_shark"
+display_name = "Grey reef shark"
+ai_kind = 2
+speed = 150.0
+health = 120.0
+damage = 30.0
+sell_value = 250
+aggro_radius = 200.0
+acceleration = 220.0
+cruise_speed_fraction = 0.35
+wander_radius = 120.0
+wander_retarget_time = 4.0
+weak_spot_offset = Vector2(24, 0)
+weak_spot_radius = 18.0
+weak_spot_multiplier = 2.5
+blood_lure_radius = 360.0
+blood_lure_duration = 10.0
+display_duration = 1.2
+charge_distance = 110.0
+leave_distance = 280.0
+charge_speed_multiplier = 2.2
+charge_max_time = 1.5
+attack_reach = 56.0
+recover_time = 2.5
+leave_time = 4.0
+lure_arrive_distance = 40.0
+knowledge_display_extra_time = 1.8
+body_shape = 0
+body_size = Vector2(96, 30)
+color = Color(0.55, 0.6, 0.66, 1)
