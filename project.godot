@@ -1,0 +1,11 @@
+config_version=5
+
+[application]
+
+config/name="Abyss Hunter"
+config/features=PackedStringArray("4.7", "GL Compatibility")
+; run/main_scene is unset: /dev-story or the developer sets it once a scene exists.
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
