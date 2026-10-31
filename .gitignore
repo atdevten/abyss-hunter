@@ -24,6 +24,9 @@ production/session-state/
 # Each is a separate checkout; staging everything would add it as an embedded
 # repository.
 .claude/worktrees/
+# gstack browser state and /browse reports; evidence worth keeping is copied
+# into production/qa/evidence/.
+/.gstack/
 
 
 # === Local sandboxes and scratch work ===
