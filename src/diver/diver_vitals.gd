@@ -24,6 +24,8 @@ var is_dead: bool = false
 
 ## Tuning data injected at construction. Read-only by convention.
 var config: DiverConfig
+## Oxygen drain multiplier of the diver's current layer; set by [DepthLayers] (Story 004).
+var oxygen_drain_multiplier: float = 1.0
 
 
 func _init(vitals_config: DiverConfig) -> void:
@@ -41,7 +43,7 @@ func start_dive() -> void:
 
 
 ## Advances vitals by [param delta] seconds at [param depth] meters.
-## At the surface both bars refill; below it oxygen drains by the layer multiplier.
+## At the surface both bars refill; below it oxygen drains by [member oxygen_drain_multiplier].
 func tick(delta: float, depth: float) -> void:
 	if is_dead:
 		return
@@ -51,8 +53,7 @@ func tick(delta: float, depth: float) -> void:
 		oxygen_changed.emit(oxygen, config.max_oxygen)
 		health_changed.emit(health, config.max_health)
 		return
-	var multiplier: float = config.oxygen_drain_multipliers[config.get_layer_index(depth)]
-	oxygen = maxf(oxygen - config.oxygen_drain_per_second * multiplier * delta, 0.0)
+	oxygen = maxf(oxygen - config.oxygen_drain_per_second * oxygen_drain_multiplier * delta, 0.0)
 	oxygen_changed.emit(oxygen, config.max_oxygen)
 	if oxygen <= 0.0:
 		_die(Cause.OXYGEN)

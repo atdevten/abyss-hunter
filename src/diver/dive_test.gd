@@ -1,10 +1,11 @@
 extends Node2D
 ## Minimal test scene: a diver with harpoon gun and camera, a follow camera, the HUD,
-## a surface line, and the Story 003 first slice: a grey reef shark and a pufferfish.
+## a surface line, the Story 003 first slice (a grey reef shark and a pufferfish), and
+## Story 004's ocean layers ([DepthLayers]) and diver lamp ([Lamp], L toggles it).
 ## Not the game's main scene. Prints, with a time stamp: diver death, harpoon shots
 ## and hits, photos, flashes, every creature behaviour change (shark display, charge,
 ## leave...), damage, blood lures (which predators are in range) and their fading,
-## diver hits, and the knowledge switch.
+## diver hits, the knowledge switch, layer changes, lamp toggles and flash lures.
 ## Debug user args (after `--`):
 ##   --start-depth=<meters>   start the dive below the surface
 ##   --auto-fire              fire and photograph at the shark whenever reloaded (aims
@@ -20,6 +21,11 @@ extends Node2D
 ##       weak    shark below the diver, auto-fire at it: a body shot with knowledge off,
 ##               a gill shot with knowledge on
 ##       gills   shark at the diver's depth, facing it; auto-fire head-on into the gills
+##   --layer=bright|dim|dark  start inside that layer with its species instead of the
+##                            shark and pufferfish: bright sardines + pufferfish; dim
+##                            lanternfish + shark; dark Atolla, giant squid, lanternfish
+##   --lamp=on|off|red        lamp at the start (default off); red = the Story 006 red lamp
+##   --flash-demo             one scripted camera flash below the diver after a delay
 
 const CREATURE_SCENE: PackedScene = preload("res://src/creatures/creature.tscn")
 const SHARK: SpeciesData = preload("res://src/creatures/species/grey_reef_shark.tres")
@@ -28,6 +34,7 @@ const SARDINE: SpeciesData = preload("res://src/creatures/species/sardine.tres")
 const LANTERNFISH: SpeciesData = preload("res://src/creatures/species/lanternfish.tres")
 const ATOLLA_JELLY: SpeciesData = preload("res://src/creatures/species/atolla_jelly.tres")
 const GIANT_SQUID: SpeciesData = preload("res://src/creatures/species/giant_squid.tres")
+const OCEAN_SCENE: PackedScene = preload("res://src/world/ocean.tscn")
 
 # Scene layout, in pixels relative to the diver's start (layout only, not tuning).
 const SHARK_OFFSET := Vector2(320.0, 120.0)
@@ -49,6 +56,18 @@ const GILLS_DEMO_SHARK_OFFSET := Vector2(180.0, 0.0)
 const DEMO_SWIM_SPEED := 150.0
 const DEMO_REACT_TIME := 0.5
 const DEMO_BACK_OFF_MARGIN := 20.0
+# --layer: meters below the layer's start the diver begins; species layout per layer.
+const LAYER_START_MARGIN := 25.0
+const BRIGHT_SARDINE_OFFSET := Vector2(-260.0, 60.0)
+const BRIGHT_PUFFERFISH_OFFSET := Vector2(180.0, 40.0)
+const DIM_LANTERNFISH_OFFSET := Vector2(-300.0, 60.0)
+const DIM_SHARK_OFFSET := Vector2(520.0, 80.0)
+const DARK_ATOLLA_OFFSET := Vector2(130.0, 90.0)
+const DARK_SQUID_OFFSET := Vector2(-280.0, 140.0)
+const DARK_LANTERNFISH_OFFSET := Vector2(190.0, -150.0)
+# --flash-demo: seconds before the flash, and where it is, relative to the diver.
+const FLASH_DEMO_DELAY := 0.5
+const FLASH_DEMO_OFFSET := Vector2(0.0, 350.0)
 
 var _diver: Diver
 var _gun: HarpoonGun
@@ -61,6 +80,9 @@ var _demo: String = ""
 var _demo_shark: Creature
 var _demo_phase: int = 0
 var _demo_phase_time: float = 0.0
+var _ocean: DepthLayers
+var _lamp: Lamp
+var _flash_demo_pending: bool = false
 
 
 func _ready() -> void:
@@ -68,7 +90,14 @@ func _ready() -> void:
 	_diver.config = load("res://src/diver/diver_config.tres")
 	add_child(_diver)
 	_context = CreatureContext.new(_diver)
+	_ocean = OCEAN_SCENE.instantiate()
+	_ocean.diver = _diver
+	_lamp = Lamp.new()
+	_lamp.config = _diver.config
+	_diver.add_child(_lamp)
 	var all_species := false
+	var layer_set: String = ""
+	var lamp_arg: String = "off"
 	# Debug user args, see the header.
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--start-depth="):
@@ -81,6 +110,29 @@ func _ready() -> void:
 			all_species = true
 		elif arg.begins_with("--shark-demo="):
 			_demo = arg.trim_prefix("--shark-demo=")
+		elif arg.begins_with("--layer="):
+			layer_set = arg.trim_prefix("--layer=")
+			var names: Array = _ocean.config.layers.map(func(layer: LayerData) -> String: return layer.display_name)
+			_diver.position.y = (_ocean.config.layers[names.find(layer_set)].start_depth + LAYER_START_MARGIN) * _diver.config.pixels_per_meter
+		elif arg.begins_with("--lamp="):
+			lamp_arg = arg.trim_prefix("--lamp=")
+		elif arg == "--flash-demo":
+			_flash_demo_pending = true
+	_ocean.layer_changed.connect(func(index: int) -> void:
+		var layer: LayerData = _ocean.config.layers[index]
+		_log("layer_changed: %d %s at %.1f m (oxygen drain x%.1f, lamp reaction %s, flash lures %s)" % [index, layer.display_name, _diver.get_depth(), layer.oxygen_drain_multiplier, LayerData.LampReaction.keys()[layer.lamp_reaction], layer.flash_lures]))
+	_ocean.flash_lure_spawned.connect(func(lure: FlashLure) -> void:
+		_log("flash lure at %s, radius %.0f, fades in %.1fs" % [lure.global_position, lure.radius, lure.duration])
+		lure.faded.connect(func(_lure: BloodLure) -> void: _log("flash lure faded"))
+		_log_predators_in_range(lure))
+	add_child(_ocean)
+	_context.depth_layers = _ocean
+	_context.lamp = _lamp
+	_lamp.lamp_toggled.connect(func(is_on: bool) -> void:
+		_log("lamp_toggled: %s (%s)" % ["on" if is_on else "off", Lamp.Mode.keys()[_lamp.mode]]))
+	if lamp_arg == "red":
+		_lamp.set_mode(Lamp.Mode.RED)
+	_lamp.set_on(lamp_arg in ["on", "red"])
 	var camera := Camera2D.new()
 	_diver.add_child(camera)
 	var tools_config: ToolsConfig = load("res://src/tools/tools_config.tres")
@@ -105,7 +157,8 @@ func _ready() -> void:
 	_camera_tool.photo_taken.connect(func(species_id: StringName) -> void:
 		_log("photo_taken: %s" % species_id))
 	_camera_tool.flash_fired.connect(func(flash_position: Vector2) -> void:
-		_log("flash_fired at %s" % flash_position))
+		_log("flash_fired at %s" % flash_position)
+		_ocean.spawn_flash_lure(flash_position))
 	_log("knowledge: %s" % ("on" if _context.knowledge_enabled else "off"))
 	match _demo:
 		"leave", "charge", "hold":
@@ -121,19 +174,31 @@ func _ready() -> void:
 		"gills":
 			_auto_fire = true
 			_auto_target = _spawn(SHARK, GILLS_DEMO_SHARK_OFFSET, "Shark")
+		_ when layer_set == "bright":
+			_spawn_school(SARDINE, BRIGHT_SARDINE_OFFSET, "Sardine")
+			_spawn(PUFFERFISH, BRIGHT_PUFFERFISH_OFFSET, "Pufferfish")
+		_ when layer_set == "dim":
+			_spawn_school(LANTERNFISH, DIM_LANTERNFISH_OFFSET, "Lanternfish")
+			_spawn(SHARK, DIM_SHARK_OFFSET, "Shark")
+		_ when layer_set == "dark":
+			_spawn(ATOLLA_JELLY, DARK_ATOLLA_OFFSET, "AtollaJelly")
+			_spawn(GIANT_SQUID, DARK_SQUID_OFFSET, "GiantSquid")
+			_spawn_school(LANTERNFISH, DARK_LANTERNFISH_OFFSET, "Lanternfish")
 		_:
 			_auto_target = _spawn(SHARK, SHARK_OFFSET, "Shark")
 			_spawn(PUFFERFISH, PUFFERFISH_OFFSET, "Pufferfish")
 	if all_species:
-		for i in SCHOOL_SIZE:
-			_spawn(SARDINE, SARDINE_SCHOOL_OFFSET + SCHOOL_SPACING * i, "Sardine%d" % i)
-			_spawn(LANTERNFISH, LANTERNFISH_SCHOOL_OFFSET + SCHOOL_SPACING * i, "Lanternfish%d" % i)
+		_spawn_school(SARDINE, SARDINE_SCHOOL_OFFSET, "Sardine")
+		_spawn_school(LANTERNFISH, LANTERNFISH_SCHOOL_OFFSET, "Lanternfish")
 		_spawn(ATOLLA_JELLY, ATOLLA_OFFSET, "AtollaJelly")
 		_spawn(GIANT_SQUID, GIANT_SQUID_OFFSET, "GiantSquid")
 
 
 func _physics_process(delta: float) -> void:
 	_elapsed += delta
+	if _flash_demo_pending and _elapsed >= FLASH_DEMO_DELAY:
+		_flash_demo_pending = false
+		_camera_tool.take_photo(_diver.global_position + FLASH_DEMO_OFFSET)
 	if _demo_shark and is_instance_valid(_demo_shark):
 		_run_approach_demo(delta)
 	if _auto_fire and is_instance_valid(_auto_target):
@@ -160,7 +225,9 @@ func _spawn(species: SpeciesData, offset: Vector2, creature_name: String) -> Cre
 	creature.damaged.connect(func(who: Creature, amount: float, is_weak_spot: bool) -> void:
 		_log("%s damaged %.1f weak_spot=%s health %.1f/%.1f" % [who.name, amount, is_weak_spot, who.health, who.species.health]))
 	creature.bled.connect(_on_creature_bled)
-	creature.flashed.connect(func(who: Creature) -> void: _log("%s flashed" % who.name))
+	creature.flashed.connect(func(who: Creature) -> void:
+		_log("%s flashed" % who.name)
+		_ocean.spawn_flash_lure(who.global_position))
 	creature.struck_diver.connect(func(who: Creature, damage: float) -> void:
 		_log("%s struck the diver for %.0f, diver health %.0f" % [who.name, damage, _diver.vitals.health]))
 	creature.died.connect(func(who: Creature) -> void: _log("%s died" % who.name))
@@ -168,10 +235,21 @@ func _spawn(species: SpeciesData, offset: Vector2, creature_name: String) -> Cre
 	return creature
 
 
+## Spawns [constant SCHOOL_SIZE] of [param species] from [param offset], named name0..
+func _spawn_school(species: SpeciesData, offset: Vector2, base_name: String) -> void:
+	for i in SCHOOL_SIZE:
+		_spawn(species, offset + SCHOOL_SPACING * i, "%s%d" % [base_name, i])
+
+
 func _on_creature_bled(creature: Creature, lure: BloodLure) -> void:
 	_log("%s bled: blood lure spawned at %s, radius %.0f, fades in %.1fs" % [creature.name, lure.global_position, lure.radius, lure.duration])
 	var source: String = creature.name
 	lure.faded.connect(func(_lure: BloodLure) -> void: _log("blood lure from %s faded" % source))
+	_log_predators_in_range(lure)
+
+
+## Logs, for every predator, whether [param lure] is close enough to attract it.
+func _log_predators_in_range(lure: BloodLure) -> void:
 	for node: Node in get_tree().get_nodes_in_group(Creature.GROUP):
 		var other := node as Creature
 		if other.species.ai_kind == SpeciesData.AiKind.PREDATOR:

@@ -11,7 +11,11 @@ extends Area2D
 ## [method take_damage] multiplies the damage by [member SpeciesData.weak_spot_multiplier]
 ## when it was in the weak spot, spawns a [BloodLure] at the hit point if the species
 ## bleeds, and starts the hit flash if the species flashes (Atolla).
-## Implements Story 003 (production/epics/abyss-hunter/story-003-species-ai-blood.md).
+## A species with [member SpeciesData.glow_radius] > 0 carries its own [GlowLight]
+## (bioluminescence, the only light in a dark layer with the lamp off); a hit flash
+## brightens it.
+## Implements Story 003 (production/epics/abyss-hunter/story-003-species-ai-blood.md)
+## and the glow of Story 004 (production/epics/abyss-hunter/story-004-depth-layers-lamp.md).
 ##
 ## Usage:
 ## [codeblock]
@@ -28,6 +32,8 @@ extends Area2D
 const GROUP := &"creatures"
 ## Horizontal speed below which the creature keeps its current facing, px/s.
 const FACING_DEADZONE := 4.0
+## Extra glow energy at the start of a hit flash, as a multiple of the glow energy (visual).
+const FLASH_GLOW_BOOST := 3.0
 
 ## Emitted when the AI switches behaviour (e.g. a predator's [code]display[/code]).
 signal behaviour_changed(creature: Creature, behaviour: StringName)
@@ -65,6 +71,7 @@ var _hit_point: Vector2
 var _hit_pending: bool = false
 var _hit_weak: bool = false
 var _flash_left: float = 0.0
+var _glow: GlowLight
 
 
 func _ready() -> void:
@@ -84,6 +91,9 @@ func _ready() -> void:
 			_ai = PredatorAI.new()
 	_ai.creature = self
 	add_child(_ai)
+	if species.glow_radius > 0.0:
+		_glow = GlowLight.new(species.glow_radius, species.glow_color, species.glow_energy)
+		add_child(_glow)
 
 
 func _physics_process(delta: float) -> void:
@@ -92,6 +102,10 @@ func _physics_process(delta: float) -> void:
 	_ai.think(delta)
 	position += velocity * delta
 	_flash_left = maxf(_flash_left - delta, 0.0)
+	if _glow:
+		_glow.position = Vector2(species.glow_offset.x * facing, species.glow_offset.y)
+		if species.flash_on_hit_duration > 0.0:
+			_glow.energy = species.glow_energy * (1.0 + FLASH_GLOW_BOOST * _flash_left / species.flash_on_hit_duration)
 	queue_redraw()
 
 

@@ -1,11 +1,12 @@
 class_name DiverConfig
 extends Resource
-## Tuning data for the diver: movement, bar sizes, oxygen drain per layer, surface refill.
+## Tuning data for the diver: movement, bar sizes, oxygen drain, surface refill, lamp.
+## The per-layer depths and oxygen drain multipliers live in [LayersConfig] (Story 004).
 ##
 ## Usage:
 ## [codeblock]
 ## var config: DiverConfig = load("res://src/diver/diver_config.tres")
-## var multiplier: float = config.oxygen_drain_multipliers[config.get_layer_index(80.0)]
+## var max_speed: float = config.swim_speed
 ## [/codeblock]
 
 @export_group("Swimming")
@@ -19,12 +20,8 @@ extends Resource
 @export_group("Vitals")
 @export var max_oxygen: float = 100.0
 @export var max_health: float = 100.0
-## Base oxygen lost per second at multiplier 1.0.
+## Base oxygen lost per second at multiplier 1.0 (the layer's multiplier, see [LayerData]).
 @export var oxygen_drain_per_second: float = 1.5
-## Depth (meters) at which each layer begins; ascending, first entry is 0.
-@export var layer_start_depths: PackedFloat32Array = PackedFloat32Array([0.0, 50.0, 150.0, 300.0])
-## Oxygen drain multiplier per layer; same length as layer_start_depths.
-@export var oxygen_drain_multipliers: PackedFloat32Array = PackedFloat32Array([1.0, 1.5, 2.5, 4.0])
 
 @export_group("Surface")
 ## Depth (meters) at or above which the diver counts as at the surface/boat.
@@ -38,11 +35,12 @@ extends Resource
 ## Pixels per meter, used to convert world y to depth.
 @export var pixels_per_meter: float = 16.0
 
+@export_group("Lamp")
+## Radius of the lamp's light in pixels.
+@export var lamp_radius: float = 260.0
+## Brightness of the lamp's light.
+@export var lamp_energy: float = 1.2
+@export var lamp_white_color: Color = Color(1.0, 0.97, 0.88)
+## Color of the red lamp (Story 006 upgrade): lights the way, unseen by creatures.
+@export var lamp_red_color: Color = Color(1.0, 0.15, 0.1)
 
-## Returns the index of the layer containing [param depth] (meters).
-func get_layer_index(depth: float) -> int:
-	var index: int = 0
-	for i in layer_start_depths.size():
-		if depth >= layer_start_depths[i]:
-			index = i
-	return index

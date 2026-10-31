@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="LayersConfig" format=3]
+
+[ext_resource type="Script" path="res://src/world/layer_data.gd" id="1_rxm88"]
+[ext_resource type="Script" path="res://src/world/layers_config.gd" id="2_1gj2d"]
+
+[sub_resource type="Resource" id="Resource_u73yy"]
+script = ExtResource("1_rxm88")
+display_name = "bright"
+ambient_color = Color(0.82, 0.94, 1, 1)
+water_color = Color(0.25, 0.62, 0.85, 1)
+
+[sub_resource type="Resource" id="Resource_nhlfd"]
+script = ExtResource("1_rxm88")
+display_name = "dim"
+start_depth = 50.0
+oxygen_drain_multiplier = 1.5
+ambient_color = Color(0.22, 0.42, 0.68, 1)
+water_color = Color(0.1, 0.32, 0.55, 1)
+lamp_reaction = 1
+
+[sub_resource type="Resource" id="Resource_u7mgc"]
+script = ExtResource("1_rxm88")
+display_name = "dark"
+start_depth = 150.0
+oxygen_drain_multiplier = 2.5
+ambient_color = Color(0.02, 0.03, 0.07, 1)
+water_color = Color(0.03, 0.08, 0.2, 1)
+lamp_reaction = 2
+flash_lures = true
+
+[resource]
+script = ExtResource("2_1gj2d")
+layers = Array[ExtResource("1_rxm88")]([SubResource("Resource_u73yy"), SubResource("Resource_nhlfd"), SubResource("Resource_u7mgc")])

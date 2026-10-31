@@ -62,6 +62,20 @@ enum BodyShape { FISH, PUFFER, JELLY, SQUID }
 ## Radius of the flash glow (visual; Story 004 uses it for luring).
 @export var flash_radius: float = 0.0
 
+@export_group("Lamp And Glow")
+## Swims to the diver's white lamp in a layer whose lamp reaction is ATTRACT (small fish).
+## Story 004.
+@export var drawn_to_lamp: bool = false
+## Takes no notice of the lamp in a layer whose lamp reaction is REPEL (the "most
+## creatures move away" exceptions). Story 004.
+@export var ignores_lamp: bool = false
+## Radius in pixels of the creature's own bioluminescent light. 0 = does not glow.
+@export var glow_radius: float = 0.0
+@export var glow_color: Color = Color(0.3, 0.7, 1.0)
+@export var glow_energy: float = 1.0
+## Center of the glow in local pixels, for the creature facing right (+x).
+@export var glow_offset: Vector2 = Vector2.ZERO
+
 @export_group("Schooling")
 ## Schoolmates within this radius pull together. 0 = solitary.
 @export var school_radius: float = 0.0

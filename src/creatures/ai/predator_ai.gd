@@ -5,6 +5,9 @@ extends CreatureAI
 ## patrol --diver in aggro_radius--> display (or charge if display_duration is 0)
 ## patrol --blood lure in its radius--> lured --lure faded--> patrol
 ## lured  --diver in aggro_radius--> display (or charge)
+## patrol --lamp-drawn fish near the lamp, in prey_follow_radius--> follow_prey (Story 004)
+## follow_prey --diver in aggro_radius--> display (or charge); --lure--> lured; --no fish--> patrol
+## patrol, lured, follow_prey --white lamp repels it (REPEL layer)--> lamp_scared --leave_time--> patrol
 ## display --diver backs off to leave_distance--> leave --leave_time--> patrol
 ## display --diver pushes in to charge_distance, or display time runs out--> charge
 ## charge --reaches attack_reach: diver takes damage--> recover --recover_time--> patrol
@@ -13,10 +16,12 @@ extends CreatureAI
 ## The display (snout up, pectoral fins down, back arched) is drawn by the creature
 ## while [member Creature.display_pose] is set. With encyclopedia knowledge on, the
 ## display lasts [member SpeciesData.knowledge_display_extra_time] longer.
-## Behaviour names reported: [code]patrol, lured, display, charge, recover, leave[/code].
+## Flash lures ([FlashLure], Story 004) are blood lures to this AI.
+## Behaviour names reported: [code]patrol, lured, display, charge, recover, leave,
+## follow_prey, lamp_scared[/code].
 ## Implements Story 003 (production/epics/abyss-hunter/story-003-species-ai-blood.md).
 
-enum State { PATROL, LURED, DISPLAY, CHARGE, RECOVER, LEAVE }
+enum State { PATROL, LURED, DISPLAY, CHARGE, RECOVER, LEAVE, FOLLOW_PREY, LAMP_SCARED }
 
 const STATE_NAMES: Dictionary[State, StringName] = {
 	State.PATROL: &"patrol",
@@ -25,6 +30,8 @@ const STATE_NAMES: Dictionary[State, StringName] = {
 	State.CHARGE: &"charge",
 	State.RECOVER: &"recover",
 	State.LEAVE: &"leave",
+	State.FOLLOW_PREY: &"follow_prey",
+	State.LAMP_SCARED: &"lamp_scared",
 }
 
 var _state: State = State.PATROL
@@ -45,19 +52,26 @@ func think(delta: float) -> void:
 	var diver_position: Vector2 = context.diver.global_position if context.diver else creature.global_position
 	var distance: float = creature.global_position.distance_to(diver_position)
 	match _state:
-		State.PATROL, State.LURED:
+		State.PATROL, State.LURED, State.FOLLOW_PREY:
+			if context.lamp_repels(creature):
+				_enter(State.LAMP_SCARED)
+				return
 			if diver_active and distance <= species.aggro_radius:
 				_enter(State.DISPLAY if species.display_duration > 0.0 else State.CHARGE)
 				return
-			var lure: BloodLure = _nearest_lure()
-			if lure == null:
+			var target: Node2D = _nearest_lure()
+			var next_state: State = State.LURED
+			if target == null:
+				target = _nearest_lamp_prey()
+				next_state = State.FOLLOW_PREY
+			if target == null:
 				_enter(State.PATROL)
 				creature.steer(wander_velocity(delta), delta)
 				return
-			_enter(State.LURED)
-			var to_lure: Vector2 = lure.global_position - creature.global_position
-			var arrive: float = clampf(to_lure.length() / species.lure_arrive_distance, 0.0, 1.0)
-			creature.steer(to_lure.normalized() * species.speed * arrive, delta)
+			_enter(next_state)
+			var to_target: Vector2 = target.global_position - creature.global_position
+			var arrive: float = clampf(to_target.length() / species.lure_arrive_distance, 0.0, 1.0)
+			creature.steer(to_target.normalized() * species.speed * arrive, delta)
 		State.DISPLAY:
 			creature.face_toward(diver_position)
 			creature.steer(Vector2.ZERO, delta)
@@ -76,7 +90,7 @@ func think(delta: float) -> void:
 				_enter(State.RECOVER)
 			elif not diver_active or _state_time >= species.charge_max_time:
 				_enter(State.RECOVER)
-		State.RECOVER, State.LEAVE:
+		State.RECOVER, State.LEAVE, State.LAMP_SCARED:
 			creature.steer(diver_position.direction_to(creature.global_position) * species.speed, delta)
 			if _state_time >= (species.recover_time if _state == State.RECOVER else species.leave_time):
 				_enter(State.PATROL)
@@ -93,6 +107,24 @@ func _enter(state: State) -> void:
 		if creature.context.knowledge_enabled:
 			_display_time += creature.species.knowledge_display_extra_time
 	creature.set_behaviour(STATE_NAMES[state])
+
+
+## In an ATTRACT layer, the nearest lamp-drawn creature around the lamp within
+## [member LayersConfig.prey_follow_radius]; null otherwise.
+func _nearest_lamp_prey() -> Creature:
+	var context: CreatureContext = creature.context
+	if context.get_lamp_reaction() != LayerData.LampReaction.ATTRACT:
+		return null
+	var config: LayersConfig = context.depth_layers.config
+	var nearest: Creature = null
+	var best: float = config.prey_follow_radius
+	for node: Node in get_tree().get_nodes_in_group(Creature.GROUP):
+		var prey := node as Creature
+		var distance: float = creature.global_position.distance_to(prey.global_position)
+		if prey.species.drawn_to_lamp and distance <= best and prey.global_position.distance_to(context.lamp.global_position) <= config.lamp_attract_radius:
+			nearest = prey
+			best = distance
+	return nearest
 
 
 func _nearest_lure() -> BloodLure:

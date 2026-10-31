@@ -24,6 +24,7 @@ school_radius = 90.0
 separation_distance = 18.0
 cohesion_weight = 0.8
 predator_tighten_multiplier = 1.0
+drawn_to_lamp = true
 body_shape = 0
 body_size = Vector2(22, 8)
 color = Color(0.78, 0.84, 0.9, 1)

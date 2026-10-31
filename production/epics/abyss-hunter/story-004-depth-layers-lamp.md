@@ -1,12 +1,12 @@
 # Story 004: Three depth layers, visibility and lamp
 
 > **Epic**: abyss-hunter
-> **Status**: Ready
+> **Status**: In Progress
 > **Layer**: Feature
 > **Type**: Visual/Feel
 > **Estimate**: L
 > **Manifest Version**: N/A (minimal — no control manifest)
-> **Last Updated**: [set by /dev-story when implementation begins]
+> **Last Updated**: 2026-10-31
 
 ## Context
 
@@ -56,14 +56,27 @@ N/A (minimal — no control manifest)
 
 ## Files
 
-- `src/world/ocean.tscn`
-- `src/world/depth_layers.gd`
-- `src/diver/lamp.gd`
+- `src/world/layer_data.gd`
+- `src/world/layers_config.gd`
 - `src/world/layers_config.tres`
-- `production/qa/evidence/layers-lamp-*.png`
-- `production/qa/evidence/layers-lamp-evidence.md`
-
----
+- `src/world/depth_layers.gd`
+- `src/world/ocean.tscn`
+- `src/world/glow_light.gd`
+- `src/diver/lamp.gd`
+- `src/creatures/flash_lure.gd`
+- `src/creatures/ai/fleeing_ai.gd`
+- `src/creatures/ai/passive_ai.gd`
+- `src/creatures/ai/predator_ai.gd`
+- `src/creatures/creature.gd`
+- `src/creatures/creature_context.gd`
+- `src/creatures/species_data.gd`
+- `src/creatures/species/atolla_jelly.tres`
+- `src/creatures/species/giant_squid.tres`
+- `src/creatures/species/lanternfish.tres`
+- `src/creatures/species/sardine.tres`
+- `src/diver/dive_test.gd`
+- `src/diver/diver_config.gd`
+- `src/diver/diver_vitals.gd`
 
 ## QA Test Cases
 
