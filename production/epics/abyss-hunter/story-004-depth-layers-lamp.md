@@ -1,12 +1,12 @@
 # Story 004: Three depth layers, visibility and lamp
 
 > **Epic**: abyss-hunter
-> **Status**: In Progress
+> **Status**: Complete
 > **Layer**: Feature
 > **Type**: Visual/Feel
 > **Estimate**: L
 > **Manifest Version**: N/A (minimal — no control manifest)
-> **Last Updated**: 2026-10-31
+> **Last Updated**: 2026-11-01
 
 ## Context
 
@@ -99,3 +99,10 @@ N/A (minimal — no control manifest)
 
 - Depends on: `production/epics/abyss-hunter/story-001-swim-oxygen-health.md`, `production/epics/abyss-hunter/story-003-species-ai-blood.md`
 - Unlocks: `production/epics/abyss-hunter/story-006-boat-loop.md`
+
+## Completion Notes
+**Completed**: 2026-11-01
+**Criteria**: 8/8 passing
+**Deviations**: Old 4th layer (300 m, oxygen x4.0) removed from DiverConfig; started while Story 003 was In Progress (risk accepted); white lamp in the dark layer makes the diver immune to predators (repel 340 px > aggro 200-240 px); Compatibility 16-lights-per-item limit untested (web test reached about 15). Design questions: layer depths 0/50/150 m vs the brief's 200 m zones, dark layer very dim with the lamp on, Atolla hits lure predators
+**Test Evidence**: `production/qa/evidence/story-004-depth-layers-lamp/` (01-08 desktop, 09-12 web) + sign-off `production/qa/evidence/story-004-depth-layers-lamp-evidence.md` (approved by atdevten, 2026-11-01)
+**Reviewed by**: self, no independent review
