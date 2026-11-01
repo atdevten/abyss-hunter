@@ -4,3 +4,5 @@
 
 [resource]
 script = ExtResource("1")
+max_oxygen = 50.0
+oxygen_drain_per_second = 2.0

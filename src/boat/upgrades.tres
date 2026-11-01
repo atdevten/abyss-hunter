@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="UpgradesConfig" load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://src/boat/upgrade_data.gd" id="1"]
+[ext_resource type="Script" path="res://src/boat/upgrades_config.gd" id="2"]
+
+[sub_resource type="Resource" id="Resource_tank"]
+script = ExtResource("1")
+id = &"oxygen_tank"
+display_name = "Oxygen tank"
+prices = Array[int]([150, 400])
+bonuses = Array[float]([40.0, 80.0])
+level_names = Array[String](["Large tank: +40 oxygen (reaches the dark layer)", "Twin tanks: +80 oxygen"])
+
+[sub_resource type="Resource" id="Resource_harpoon"]
+script = ExtResource("1")
+id = &"harpoon"
+display_name = "Harpoon"
+prices = Array[int]([100, 300])
+bonuses = Array[float]([15.0, 35.0])
+level_names = Array[String](["Steel tip: +15 damage", "Barbed tip: +35 damage"])
+
+[sub_resource type="Resource" id="Resource_red_lamp"]
+script = ExtResource("1")
+id = &"red_lamp"
+display_name = "Red lamp"
+prices = Array[int]([250])
+bonuses = Array[float]([1.0])
+level_names = Array[String](["Red filter: see in the dark unseen ([R] white/red)"])
+
+[resource]
+script = ExtResource("2")
+upgrades = Array[ExtResource("1")]([SubResource("Resource_tank"), SubResource("Resource_harpoon"), SubResource("Resource_red_lamp")])

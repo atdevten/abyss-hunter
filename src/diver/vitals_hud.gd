@@ -1,7 +1,8 @@
 class_name VitalsHud
 extends Control
 ## Minimal HUD: an oxygen bar and a health bar bound to a [DiverVitals], and
-## (Story 005) the encyclopedia progress line bound to an [Encyclopedia].
+## (Story 005) the encyclopedia progress line bound to an [Encyclopedia],
+## and (Story 006) the cargo and money bound to a [RunState].
 ##
 ## Usage:
 ## [codeblock]
@@ -9,12 +10,15 @@ extends Control
 ## canvas_layer.add_child(hud)
 ## hud.bind(diver.vitals)
 ## hud.bind_encyclopedia(encyclopedia)
+## hud.bind_run_state(run_state)
 ## [/codeblock]
 
 var _oxygen_bar: ProgressBar
 var _health_bar: ProgressBar
 var _encyclopedia_label: Label
 var _encyclopedia: Encyclopedia
+var _run_label: Label
+var _run: RunState
 
 
 func _ready() -> void:
@@ -26,6 +30,8 @@ func _ready() -> void:
 	_health_bar = _make_bar(box, Color.RED)
 	_encyclopedia_label = Label.new()
 	box.add_child(_encyclopedia_label)
+	_run_label = Label.new()
+	box.add_child(_run_label)
 
 
 ## Connects the bars to [param vitals] and shows its current values.
@@ -41,6 +47,18 @@ func bind_encyclopedia(encyclopedia: Encyclopedia) -> void:
 	_encyclopedia = encyclopedia
 	encyclopedia.entry_changed.connect(_update_encyclopedia.unbind(3))
 	_update_encyclopedia()
+
+
+## Shows [param run]'s cargo (fish and value) and money, kept up to date (Story 006).
+func bind_run_state(run: RunState) -> void:
+	_run = run
+	run.cargo_changed.connect(_update_run.unbind(2))
+	run.money_changed.connect(_update_run.unbind(1))
+	_update_run()
+
+
+func _update_run() -> void:
+	_run_label.text = "Cargo %d fish ($%d)   Money $%d" % [_run.cargo.size(), _run.get_cargo_value(), _run.money]
 
 
 func _update_encyclopedia() -> void:

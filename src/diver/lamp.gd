@@ -2,7 +2,7 @@ class_name Lamp
 extends GlowLight
 ## The diver's lamp: a light around the diver toggled with the L key; off at the
 ## start of a dive and costs nothing to run. White by default; the red mode (bought
-## at the boat in Story 006, a debug switch until then) lights the way without being
+## at the boat in Story 006, then switched with R) lights the way without being
 ## seen by creatures. What creatures do about a seen lamp depends on the diver's
 ## layer ([member LayerData.lamp_reaction]); they read it through [CreatureContext].
 ## Add as a child of the diver.
@@ -20,9 +20,13 @@ enum Mode { WHITE, RED }
 
 ## Toggle key, read by physical key like the diver's movement.
 const TOGGLE_KEY := KEY_L
+## Switches white/red once [member red_unlocked].
+const MODE_KEY := KEY_R
 
 ## Emitted when the lamp is switched on or off.
 signal lamp_toggled(is_on: bool)
+## Emitted when the light color mode changes.
+signal mode_changed(mode: Mode)
 
 ## Injected tuning data. Must be set before the node enters the tree.
 @export var config: DiverConfig
@@ -30,6 +34,9 @@ signal lamp_toggled(is_on: bool)
 var is_on: bool = false
 ## Current light color mode. Change it with [method set_mode].
 var mode: Mode = Mode.WHITE
+## True once the red lamp is bought at the boat ([Boat], Story 006): [constant MODE_KEY]
+## then switches white/red.
+var red_unlocked: bool = false
 
 
 func _ready() -> void:
@@ -43,6 +50,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	var key := event as InputEventKey
 	if key and key.pressed and not key.echo and key.physical_keycode == TOGGLE_KEY:
 		set_on(not is_on)
+	elif key and key.pressed and not key.echo and key.physical_keycode == MODE_KEY and red_unlocked:
+		set_mode(Mode.WHITE if mode == Mode.RED else Mode.RED)
 
 
 ## Switches the lamp on or off, emitting [signal lamp_toggled] on a change.
@@ -58,6 +67,7 @@ func set_on(on: bool) -> void:
 func set_mode(new_mode: Mode) -> void:
 	mode = new_mode
 	color = config.lamp_red_color if mode == Mode.RED else config.lamp_white_color
+	mode_changed.emit(mode)
 
 
 ## True when creatures can see the lamp: it is on and white.

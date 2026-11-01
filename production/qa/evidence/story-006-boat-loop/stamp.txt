@@ -1,0 +1,12 @@
+Reviewed-Content-Hash: src/boat/run_state.gd 78f81412b2358cded96f99dd46ee298891c060e2
+Reviewed-Content-Hash: src/boat/upgrade_data.gd 8ebc37d6e1bae88493e09a2d1c492a2c6808efe2
+Reviewed-Content-Hash: src/boat/upgrades_config.gd df19bb95f3a89e1f1e830000f29233fc97c8abb5
+Reviewed-Content-Hash: src/boat/upgrades.tres 7d4aabc862555869adbcf6bc2f4d7ef332ecfa23
+Reviewed-Content-Hash: src/boat/boat.gd 8ebfebdd5fa0cd5e4b205a7126f9f3da94691b4f
+Reviewed-Content-Hash: src/boat/boat.tscn 44b780c5da0b13c52e8d687f219e0bde3933892d
+Reviewed-Content-Hash: src/boat/shop.gd fef176af1f861de837d91cb3b11530387147f11e
+Reviewed-Content-Hash: src/boat/shop.tscn 6b1a82f3036ce82d18d317530ca70678b6e0cbbf
+Reviewed-Content-Hash: src/diver/diver_config.tres b27bd4727ac961dc943f5eb96e3b79f00ec9f01c
+Reviewed-Content-Hash: src/diver/lamp.gd 37a7e93505c3328988803ad0d29f5fa2d4868128
+Reviewed-Content-Hash: src/diver/vitals_hud.gd 15f69b4d0f3312c28eed0445eb551803c16a8bf3
+Reviewed-Content-Hash: src/diver/dive_test.gd ef72a369ab852e258225a3122e2494b42bf39d26

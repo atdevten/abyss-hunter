@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://src/boat/boat.gd" id="1"]
+[ext_resource type="PackedScene" path="res://src/boat/shop.tscn" id="2"]
+
+[node name="Boat" type="Node2D"]
+z_index = -1
+script = ExtResource("1")
+dock_half_width = 120.0
+
+[node name="ShopLayer" type="CanvasLayer" parent="."]
+layer = 2
+
+[node name="Shop" parent="ShopLayer" instance=ExtResource("2")]

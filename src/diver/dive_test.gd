@@ -7,8 +7,11 @@ extends Node2D
 ## leave...), damage, blood lures (which predators are in range) and their fading,
 ## diver hits, layer changes, lamp toggles and flash lures, and (Story 005) the
 ## encyclopedia: photo/kill recorded, committed N, discarded N, completed (win).
-## Keys: L lamp, E encyclopedia screen, B stands in for "reached the boat" (commits
-## pending halves; the boat is Story 006). Diver death discards pending halves.
+## Story 006: the boat ([Boat]) at the surface ends a dive when the diver swims back
+## to it (commits pending halves, sells the cargo, refills, opens the shop); death
+## respawns the diver there, losing the cargo and pending halves. Prints boat events.
+## Keys: L lamp, R white/red lamp (once bought), E encyclopedia screen, B shop (at the
+## boat); in the shop 1/2/3 buy, Space/Enter dive.
 ## Debug user args (after `--`):
 ##   --start-depth=<meters>   start the dive below the surface
 ##   --auto-fire              fire and photograph at the shark whenever reloaded (aims
@@ -18,8 +21,8 @@ extends Node2D
 ##                            behaviour | weak_spot | both. all = 6/6 -> win state
 ##   --pending=<spec>         halves recorded but not yet brought to the boat (same spec)
 ##   --show-encyclopedia      open the encyclopedia screen at the start
-##   --boat-at=<seconds>      reach the boat (commit) at that time
-##   --die-at=<seconds>       kill the diver at that time (discards pending)
+##   --boat-at=<seconds>      move the diver to the boat at that time (docks)
+##   --die-at=<seconds>       kill the diver at that time (respawns on the boat)
 ##   --all-species            also spawn sardine and lanternfish schools, an Atolla
 ##                            jelly and a giant squid
 ##   --shark-demo=<mode>      scripted diver for an unattended run:
@@ -35,6 +38,12 @@ extends Node2D
 ##                            lanternfish + shark; dark Atolla, giant squid, lanternfish
 ##   --lamp=on|off|red        lamp at the start (default off); red = the Story 006 red lamp
 ##   --flash-demo             one scripted camera flash below the diver after a delay
+##   --money=<n>              money at the start
+##   --upgrades=<id>:<level>,...  upgrade levels at the start (oxygen_tank, harpoon, red_lamp)
+##   --cargo=<species_id>,... fish in the cargo at the start
+##   --show-shop              dock at the start (sells the cargo, commits pending) -> shop
+##   --auto-dive=<meters>     scripted dive straight down to that depth at full swim speed
+##                            and straight back up to the boat, no creatures (AC 4 check)
 
 const CREATURE_SCENE: PackedScene = preload("res://src/creatures/creature.tscn")
 const SHARK: SpeciesData = preload("res://src/creatures/species/grey_reef_shark.tres")
@@ -46,7 +55,10 @@ const GIANT_SQUID: SpeciesData = preload("res://src/creatures/species/giant_squi
 const OCEAN_SCENE: PackedScene = preload("res://src/world/ocean.tscn")
 const ENCYCLOPEDIA_BOOK: EncyclopediaBook = preload("res://src/encyclopedia/encyclopedia_book.tres")
 const ENCYCLOPEDIA_SCREEN_SCENE: PackedScene = preload("res://src/encyclopedia/encyclopedia_screen.tscn")
-const BOAT_KEY := KEY_B
+const BOAT_SCENE: PackedScene = preload("res://src/boat/boat.tscn")
+const UPGRADES: UpgradesConfig = preload("res://src/boat/upgrades.tres")
+## Every species, for --cargo.
+const ALL_SPECIES: Array[SpeciesData] = [SARDINE, PUFFERFISH, LANTERNFISH, SHARK, ATOLLA_JELLY, GIANT_SQUID]
 const UNLOCK_HALVES: Dictionary[String, Array] = {
 	"behaviour": [Encyclopedia.Half.BEHAVIOUR],
 	"weak_spot": [Encyclopedia.Half.WEAK_SPOT],
@@ -103,11 +115,17 @@ var _flash_demo_pending: bool = false
 var _encyclopedia: Encyclopedia
 var _boat_at: float = INF
 var _die_at: float = INF
+var _run: RunState
+var _boat: Boat
+## --auto-dive target depth in meters; INF when not auto-diving.
+var _auto_dive_depth: float = INF
+var _auto_dive_rising: bool = false
 
 
 func _ready() -> void:
 	_diver = Diver.new()
-	_diver.config = load("res://src/diver/diver_config.tres")
+	# A copy: the boat's oxygen tank upgrade changes it.
+	_diver.config = load("res://src/diver/diver_config.tres").duplicate() as DiverConfig
 	add_child(_diver)
 	_context = CreatureContext.new(_diver)
 	_encyclopedia = Encyclopedia.new(ENCYCLOPEDIA_BOOK)
@@ -123,6 +141,10 @@ func _ready() -> void:
 	var all_species := false
 	var layer_set: String = ""
 	var lamp_arg: String = "off"
+	var money: int = 0
+	var upgrades_spec: String = ""
+	var cargo_spec: String = ""
+	var show_shop := false
 	# Debug user args, see the header.
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--start-depth="):
@@ -151,9 +173,19 @@ func _ready() -> void:
 			lamp_arg = arg.trim_prefix("--lamp=")
 		elif arg == "--flash-demo":
 			_flash_demo_pending = true
+		elif arg.begins_with("--money="):
+			money = arg.trim_prefix("--money=").to_int()
+		elif arg.begins_with("--upgrades="):
+			upgrades_spec = arg.trim_prefix("--upgrades=")
+		elif arg.begins_with("--cargo="):
+			cargo_spec = arg.trim_prefix("--cargo=")
+		elif arg == "--show-shop":
+			show_shop = true
+		elif arg.begins_with("--auto-dive="):
+			_auto_dive_depth = arg.trim_prefix("--auto-dive=").to_float()
 	_ocean.layer_changed.connect(func(index: int) -> void:
 		var layer: LayerData = _ocean.config.layers[index]
-		_log("layer_changed: %d %s at %.1f m (oxygen drain x%.1f, lamp reaction %s, flash lures %s)" % [index, layer.display_name, _diver.get_depth(), layer.oxygen_drain_multiplier, LayerData.LampReaction.keys()[layer.lamp_reaction], layer.flash_lures]))
+		_log("layer_changed: %d %s at %.1f m (oxygen drain x%.1f, lamp reaction %s, flash lures %s), oxygen %.1f/%.0f" % [index, layer.display_name, _diver.get_depth(), layer.oxygen_drain_multiplier, LayerData.LampReaction.keys()[layer.lamp_reaction], layer.flash_lures, _diver.vitals.oxygen, _diver.config.max_oxygen]))
 	_ocean.flash_lure_spawned.connect(func(lure: FlashLure) -> void:
 		_log("flash lure at %s, radius %.0f, fades in %.1fs" % [lure.global_position, lure.radius, lure.duration])
 		lure.faded.connect(func(_lure: BloodLure) -> void: _log("flash lure faded"))
@@ -163,12 +195,14 @@ func _ready() -> void:
 	_context.lamp = _lamp
 	_lamp.lamp_toggled.connect(func(is_on: bool) -> void:
 		_log("lamp_toggled: %s (%s)" % ["on" if is_on else "off", Lamp.Mode.keys()[_lamp.mode]]))
+	_lamp.mode_changed.connect(func(new_mode: Lamp.Mode) -> void: _log("lamp mode: %s" % Lamp.Mode.keys()[new_mode]))
 	if lamp_arg == "red":
 		_lamp.set_mode(Lamp.Mode.RED)
 	_lamp.set_on(lamp_arg in ["on", "red"])
 	var camera := Camera2D.new()
 	_diver.add_child(camera)
-	var tools_config: ToolsConfig = load("res://src/tools/tools_config.tres")
+	# A copy: the boat's harpoon upgrade changes it.
+	var tools_config := load("res://src/tools/tools_config.tres").duplicate() as ToolsConfig
 	_gun = HarpoonGun.new()
 	_gun.config = tools_config
 	_diver.add_child(_gun)
@@ -187,8 +221,7 @@ func _ready() -> void:
 	_encyclopedia.completed.connect(func() -> void:
 		_log("encyclopedia completed %d/%d: WIN - %s" % [_encyclopedia.completed_count(), ENCYCLOPEDIA_BOOK.entries.size(), ENCYCLOPEDIA_BOOK.win_message]))
 	_diver.vitals.diver_died.connect(func(cause: DiverVitals.Cause) -> void:
-		_log("diver_died: %s" % DiverVitals.Cause.keys()[cause])
-		_log("encyclopedia: discarded %d pending halves" % _encyclopedia.discard_pending()))
+		_log("diver_died: %s at %.1f m" % [DiverVitals.Cause.keys()[cause], _diver.get_depth()]))
 	_gun.harpoon_fired.connect(func(harpoon: Harpoon) -> void:
 		_log("harpoon_fired from %s" % harpoon.global_position)
 		harpoon.harpoon_lost.connect(func() -> void: _log("harpoon_lost")))
@@ -201,10 +234,35 @@ func _ready() -> void:
 	_camera_tool.flash_fired.connect(func(flash_position: Vector2) -> void:
 		_log("flash_fired at %s" % flash_position)
 		_ocean.spawn_flash_lure(flash_position))
+	_run = RunState.new(UPGRADES)
+	hud.bind_run_state(_run)
+	_boat = BOAT_SCENE.instantiate()
+	add_child(_boat)
+	_boat.bind(_diver, _lamp, tools_config, _encyclopedia, _run)
+	_boat.dive_started.connect(func() -> void: _log("boat: dive started"))
+	_boat.docked.connect(func(fish: int, earned: int, halves: int) -> void:
+		_auto_dive_depth = INF
+		_log("boat: docked - sold %d fish for $%d (money $%d), committed %d halves (%d/%d complete), vitals refilled" % [fish, earned, _run.money, halves, _encyclopedia.completed_count(), ENCYCLOPEDIA_BOOK.entries.size()]))
+	_boat.respawned.connect(func(cause: DiverVitals.Cause, fish: int, halves: int) -> void:
+		_auto_dive_depth = INF
+		_log("boat: died (%s) -> respawned on the boat; cargo lost %d fish, discarded %d pending halves; kept money $%d and upgrades" % [DiverVitals.Cause.keys()[cause], fish, halves, _run.money]))
+	_boat.shop.dive_requested.connect(func() -> void: _log("shop: closed, dive"))
+	_run.upgrade_changed.connect(func(upgrade: UpgradeData, level: int) -> void:
+		_log("upgrade: %s level %d/%d (bonus %.0f), money $%d, max oxygen %.0f, harpoon damage %.0f, red lamp %s" % [upgrade.id, level, upgrade.get_max_level(), _run.get_bonus(upgrade.id), _run.money, _diver.config.max_oxygen, tools_config.harpoon_damage, _lamp.red_unlocked]))
 	if unlock_spec != "none":
 		_record_spec(unlock_spec)
-		_reach_boat()
+		_log("encyclopedia: --unlock committed %d halves" % _encyclopedia.commit_pending())
 	_record_spec(pending_spec)
+	_run.add_money(money)
+	for item in upgrades_spec.split(",", false):
+		var parts: PackedStringArray = item.split(":")
+		_run.set_level(StringName(parts[0]), parts[1].to_int())
+	for species_id in cargo_spec.split(",", false):
+		for species: SpeciesData in ALL_SPECIES:
+			if species.species_id == StringName(species_id):
+				_run.add_cargo(species)
+	if show_shop:
+		_boat.dock()
 	screen.visible = screen.visible or show_encyclopedia
 	match _demo:
 		"leave", "charge", "hold":
@@ -220,6 +278,8 @@ func _ready() -> void:
 		"gills":
 			_auto_fire = true
 			_auto_target = _spawn(SHARK, GILLS_DEMO_SHARK_OFFSET, "Shark")
+		_ when _auto_dive_depth < INF:
+			pass # the AC 4 oxygen check runs without creatures
 		_ when layer_set == "bright":
 			_spawn_school(SARDINE, BRIGHT_SARDINE_OFFSET, "Sardine")
 			_spawn(PUFFERFISH, BRIGHT_PUFFERFISH_OFFSET, "Pufferfish")
@@ -244,13 +304,16 @@ func _physics_process(delta: float) -> void:
 	_elapsed += delta
 	if _elapsed >= _boat_at:
 		_boat_at = INF
-		_reach_boat()
+		_diver.position = _boat.position
+		_boat.dock()
 	if _elapsed >= _die_at:
 		_die_at = INF
 		_diver.vitals.take_damage(_diver.vitals.config.max_health)
 	if _flash_demo_pending and _elapsed >= FLASH_DEMO_DELAY:
 		_flash_demo_pending = false
 		_camera_tool.take_photo(_diver.global_position + FLASH_DEMO_OFFSET)
+	if _auto_dive_depth < INF:
+		_run_auto_dive(delta)
 	if _demo_shark and is_instance_valid(_demo_shark):
 		_run_approach_demo(delta)
 	if _auto_fire and is_instance_valid(_auto_target):
@@ -259,15 +322,19 @@ func _physics_process(delta: float) -> void:
 		_camera_tool.take_photo(_auto_target.global_position)
 
 
-func _unhandled_input(event: InputEvent) -> void:
-	var key := event as InputEventKey
-	if key and key.pressed and not key.echo and key.physical_keycode == BOAT_KEY:
-		_reach_boat()
-
-
-## Debug stand-in for Story 006's boat: commits every pending half.
-func _reach_boat() -> void:
-	_log("encyclopedia: reached the boat, committed %d halves (%d/%d complete)" % [_encyclopedia.commit_pending(), _encyclopedia.completed_count(), ENCYCLOPEDIA_BOOK.entries.size()])
+## Scripted dive for --auto-dive: straight down at full swim speed to the target depth,
+## then straight up to the boat; logs the oxygen at the bottom and on surfacing (AC 4).
+func _run_auto_dive(delta: float) -> void:
+	var step: float = _diver.config.swim_speed * delta
+	if not _auto_dive_rising:
+		_diver.position.y += step
+		if _diver.get_depth() >= _auto_dive_depth:
+			_auto_dive_rising = true
+			_log("auto-dive: reached %.1f m, oxygen %.1f/%.0f" % [_diver.get_depth(), _diver.vitals.oxygen, _diver.config.max_oxygen])
+		return
+	_diver.position.y = maxf(_diver.position.y - step, 0.0)
+	if _diver.position.y <= 0.0:
+		_log("auto-dive: back at the surface, oxygen %.1f/%.0f" % [_diver.vitals.oxygen, _diver.config.max_oxygen])
 
 
 ## Records the halves named by an --unlock / --pending spec (see the header) as
@@ -306,7 +373,9 @@ func _spawn(species: SpeciesData, offset: Vector2, creature_name: String) -> Cre
 		_log("%s died" % who.name)
 		# Only the harpoon calls take_damage, so every creature death is a kill.
 		if _encyclopedia.record_kill(who.species_id):
-			_log("encyclopedia: kill recorded, %s weak spot half pending" % who.species_id))
+			_log("encyclopedia: kill recorded, %s weak spot half pending" % who.species_id)
+		_run.add_cargo(who.species)
+		_log("cargo: %s added (%d fish, worth $%d)" % [who.species_id, _run.cargo.size(), _run.get_cargo_value()]))
 	add_child(creature)
 	return creature
 
