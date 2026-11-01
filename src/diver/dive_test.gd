@@ -44,6 +44,11 @@ extends Node2D
 ##   --show-shop              dock at the start (sells the cargo, commits pending) -> shop
 ##   --auto-dive=<meters>     scripted dive straight down to that depth at full swim speed
 ##                            and straight back up to the boat, no creatures (AC 4 check)
+## Story 007 food chain ([Population]): every creature registers on spawn; a prey kill
+## lowers its layer's stock, docking recovers it; predators turn hungry or migrate up.
+## The HUD shows the readout; prints stock changes, layer states and dock recovery.
+## Creature behaviour lines carry the depth, so migrate / return_home show the move.
+##   --prey=<layer>:<count>,...  prey stock at the start, e.g. --prey=bright:2,dim:0
 
 const CREATURE_SCENE: PackedScene = preload("res://src/creatures/creature.tscn")
 const SHARK: SpeciesData = preload("res://src/creatures/species/grey_reef_shark.tres")
@@ -57,6 +62,7 @@ const ENCYCLOPEDIA_BOOK: EncyclopediaBook = preload("res://src/encyclopedia/ency
 const ENCYCLOPEDIA_SCREEN_SCENE: PackedScene = preload("res://src/encyclopedia/encyclopedia_screen.tscn")
 const BOAT_SCENE: PackedScene = preload("res://src/boat/boat.tscn")
 const UPGRADES: UpgradesConfig = preload("res://src/boat/upgrades.tres")
+const ECOSYSTEM: EcosystemConfig = preload("res://src/ecosystem/ecosystem_config.tres")
 ## Every species, for --cargo.
 const ALL_SPECIES: Array[SpeciesData] = [SARDINE, PUFFERFISH, LANTERNFISH, SHARK, ATOLLA_JELLY, GIANT_SQUID]
 const UNLOCK_HALVES: Dictionary[String, Array] = {
@@ -120,6 +126,7 @@ var _boat: Boat
 ## --auto-dive target depth in meters; INF when not auto-diving.
 var _auto_dive_depth: float = INF
 var _auto_dive_rising: bool = false
+var _population: Population
 
 
 func _ready() -> void:
@@ -145,6 +152,7 @@ func _ready() -> void:
 	var upgrades_spec: String = ""
 	var cargo_spec: String = ""
 	var show_shop := false
+	var prey_spec: String = ""
 	# Debug user args, see the header.
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--start-depth="):
@@ -183,6 +191,22 @@ func _ready() -> void:
 			show_shop = true
 		elif arg.begins_with("--auto-dive="):
 			_auto_dive_depth = arg.trim_prefix("--auto-dive=").to_float()
+		elif arg.begins_with("--prey="):
+			prey_spec = arg.trim_prefix("--prey=")
+	_population = Population.new(ECOSYSTEM, _ocean.config, _diver.config.pixels_per_meter)
+	_context.population = _population
+	var layer_names: Array = _ocean.config.layers.map(func(layer: LayerData) -> String: return layer.display_name)
+	for item in prey_spec.split(",", false):
+		var parts: PackedStringArray = item.split(":")
+		if parts.size() < 2 or not layer_names.has(parts[0]):
+			push_warning("--prey: ignoring '%s' (expected <layer>:<count>, layers %s)" % [item, layer_names])
+			continue
+		_population.set_count(layer_names.find(parts[0]), parts[1].to_int())
+	_log("food chain: %s" % _population.describe())
+	_population.prey_count_changed.connect(func(index: int, count: int, change: int) -> void:
+		_log("prey: %s %+d -> %d/%d | %s" % [layer_names[index], change, count, ECOSYSTEM.layers[index].starting_prey, _population.describe()]))
+	_population.layer_state_changed.connect(func(index: int, state: Population.State) -> void:
+		_log("food chain: layer %s now %s (predators speed x%.2f, aggro x%.2f, hunt in %s)" % [layer_names[index], Population.State.keys()[state], _population.get_speed_multiplier(index), _population.get_aggro_multiplier(index), layer_names[_population.get_hunt_layer(index)]]))
 	_ocean.layer_changed.connect(func(index: int) -> void:
 		var layer: LayerData = _ocean.config.layers[index]
 		_log("layer_changed: %d %s at %.1f m (oxygen drain x%.1f, lamp reaction %s, flash lures %s), oxygen %.1f/%.0f" % [index, layer.display_name, _diver.get_depth(), layer.oxygen_drain_multiplier, LayerData.LampReaction.keys()[layer.lamp_reaction], layer.flash_lures, _diver.vitals.oxygen, _diver.config.max_oxygen]))
@@ -214,6 +238,7 @@ func _ready() -> void:
 	var hud := VitalsHud.new()
 	layer.add_child(hud)
 	hud.bind(_diver.vitals)
+	hud.bind_population(_population)
 	hud.bind_encyclopedia(_encyclopedia)
 	var screen: EncyclopediaScreen = ENCYCLOPEDIA_SCREEN_SCENE.instantiate()
 	layer.add_child(screen)
@@ -242,7 +267,9 @@ func _ready() -> void:
 	_boat.dive_started.connect(func() -> void: _log("boat: dive started"))
 	_boat.docked.connect(func(fish: int, earned: int, halves: int) -> void:
 		_auto_dive_depth = INF
-		_log("boat: docked - sold %d fish for $%d (money $%d), committed %d halves (%d/%d complete), vitals refilled" % [fish, earned, _run.money, halves, _encyclopedia.completed_count(), ENCYCLOPEDIA_BOOK.entries.size()]))
+		_log("boat: docked - sold %d fish for $%d (money $%d), committed %d halves (%d/%d complete), vitals refilled" % [fish, earned, _run.money, halves, _encyclopedia.completed_count(), ENCYCLOPEDIA_BOOK.entries.size()])
+		_log("food chain: prey recovers at the boat")
+		_population.recover())
 	_boat.respawned.connect(func(cause: DiverVitals.Cause, fish: int, halves: int) -> void:
 		_auto_dive_depth = INF
 		_log("boat: died (%s) -> respawned on the boat; cargo lost %d fish, discarded %d pending halves; kept money $%d and upgrades" % [DiverVitals.Cause.keys()[cause], fish, halves, _run.money]))
@@ -360,7 +387,7 @@ func _spawn(species: SpeciesData, offset: Vector2, creature_name: String) -> Cre
 	creature.name = creature_name
 	creature.position = _diver.position + offset
 	creature.behaviour_changed.connect(func(who: Creature, behaviour: StringName) -> void:
-		_log("%s behaviour: %s (diver %.0f px away)" % [who.name, behaviour, who.global_position.distance_to(_diver.global_position)]))
+		_log("%s behaviour: %s (diver %.0f px away) at %.1f m, patrol center %.1f m" % [who.name, behaviour, who.global_position.distance_to(_diver.global_position), who.global_position.y / _diver.config.pixels_per_meter, who.home_position.y / _diver.config.pixels_per_meter]))
 	creature.damaged.connect(func(who: Creature, amount: float, is_weak_spot: bool) -> void:
 		_log("%s damaged %.1f weak_spot=%s health %.1f/%.1f" % [who.name, amount, is_weak_spot, who.health, who.species.health]))
 	creature.bled.connect(_on_creature_bled)

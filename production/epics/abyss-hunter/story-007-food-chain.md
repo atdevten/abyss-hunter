@@ -1,12 +1,12 @@
 # Story 007: Minimal food chain
 
 > **Epic**: abyss-hunter
-> **Status**: Ready
+> **Status**: In Progress
 > **Layer**: Feature
 > **Type**: Logic
 > **Estimate**: M
 > **Manifest Version**: N/A (minimal — no control manifest)
-> **Last Updated**: [set by /dev-story when implementation begins]
+> **Last Updated**: 2026-11-01
 
 ## Context
 
@@ -55,10 +55,15 @@ N/A (minimal — no control manifest)
 ## Files
 
 - `src/ecosystem/population.gd`
+- `src/ecosystem/layer_population_data.gd`
+- `src/ecosystem/ecosystem_config.gd`
 - `src/ecosystem/ecosystem_config.tres`
-- `tests/unit/ecosystem/food_chain_test.gd`
-
----
+- `src/creatures/creature_context.gd`
+- `src/creatures/creature.gd`
+- `src/creatures/ai/creature_ai.gd`
+- `src/creatures/ai/predator_ai.gd`
+- `src/diver/vitals_hud.gd`
+- `src/diver/dive_test.gd`
 
 ## QA Test Cases
 

@@ -6,6 +6,7 @@ extends RefCounted
 ## each [Creature] by its spawner, so a commit at the boat affects all creatures at once.
 ## Implements Story 003 (production/epics/abyss-hunter/story-003-species-ai-blood.md)
 ## and Story 005 (production/epics/abyss-hunter/story-005-encyclopedia.md).
+## Story 007: the optional [Population] (food chain) predators read their hunger from.
 ##
 ## Usage:
 ## [codeblock]
@@ -26,6 +27,9 @@ var encyclopedia: Encyclopedia
 var depth_layers: DepthLayers
 ## The diver's lamp. Optional.
 var lamp: Lamp
+## The food chain (Story 007). Optional: without it creatures register nowhere and
+## predators never turn hungry or migrate.
+var population: Population
 
 
 func _init(dive_diver: Diver) -> void:

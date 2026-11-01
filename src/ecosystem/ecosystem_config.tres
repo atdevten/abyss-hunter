@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="EcosystemConfig" format=3]
+
+[ext_resource type="Script" path="res://src/ecosystem/layer_population_data.gd" id="1"]
+[ext_resource type="Script" path="res://src/ecosystem/ecosystem_config.gd" id="2"]
+
+[sub_resource type="Resource" id="Resource_bright"]
+script = ExtResource("1")
+starting_prey = 20
+recovery_per_dock = 4
+aggression_threshold = 10
+migration_threshold = 4
+aggression_speed_multiplier = 1.4
+aggression_aggro_multiplier = 1.5
+
+[sub_resource type="Resource" id="Resource_dim"]
+script = ExtResource("1")
+starting_prey = 12
+recovery_per_dock = 3
+aggression_threshold = 6
+migration_threshold = 3
+aggression_speed_multiplier = 1.4
+aggression_aggro_multiplier = 1.5
+
+[sub_resource type="Resource" id="Resource_dark"]
+script = ExtResource("1")
+starting_prey = 8
+recovery_per_dock = 2
+aggression_threshold = 4
+migration_threshold = 2
+aggression_speed_multiplier = 1.3
+aggression_aggro_multiplier = 1.4
+
+[resource]
+script = ExtResource("2")
+layers = Array[ExtResource("1")]([SubResource("Resource_bright"), SubResource("Resource_dim"), SubResource("Resource_dark")])
+migration_depth_above_boundary = 12.0

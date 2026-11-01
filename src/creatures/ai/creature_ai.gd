@@ -22,11 +22,12 @@ func think(_delta: float) -> void:
 	pass
 
 
-## Desired velocity for idle wandering around the creature's home at cruise speed.
-func wander_velocity(delta: float) -> Vector2:
+## Desired velocity for idle wandering around the creature's home at cruise speed,
+## times [param speed_scale] (a hungry predator's speed multiplier, Story 007).
+func wander_velocity(delta: float, speed_scale: float = 1.0) -> Vector2:
 	var species: SpeciesData = creature.species
 	_wander_time_left -= delta
 	if _wander_time_left <= 0.0 or creature.global_position.distance_to(_wander_target) <= ARRIVE_DISTANCE:
 		_wander_target = creature.home_position + Vector2.from_angle(randf() * TAU) * randf() * species.wander_radius
 		_wander_time_left = species.wander_retarget_time
-	return creature.global_position.direction_to(_wander_target) * species.speed * species.cruise_speed_fraction
+	return creature.global_position.direction_to(_wander_target) * species.speed * species.cruise_speed_fraction * speed_scale

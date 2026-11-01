@@ -12,6 +12,9 @@ extends CreatureAI
 ## display --diver pushes in to charge_distance, or display time runs out--> charge
 ## charge --reaches attack_reach: diver takes damage--> recover --recover_time--> patrol
 ## charge --charge_max_time passed (miss)--> recover
+## patrol --food chain moved its hunt layer (Story 007)--> migrate (up a layer) or
+##        return_home --within wander_radius of the new patrol center--> patrol
+## migrate, return_home: diver, lamp and lures interrupt them as they do patrol
 ## [/codeblock]
 ## The display (snout up, pectoral fins down, back arched) is drawn by the creature
 ## while [member Creature.display_pose] is set. With the species' warning half
@@ -19,10 +22,17 @@ extends CreatureAI
 ## [member SpeciesData.knowledge_display_extra_time] longer.
 ## Flash lures ([FlashLure], Story 004) are blood lures to this AI.
 ## Behaviour names reported: [code]patrol, lured, display, charge, recover, leave,
-## follow_prey, lamp_scared[/code].
+## follow_prey, lamp_scared, migrate, return_home[/code].
+## Story 007 food chain, with [member CreatureContext.population] set: the home layer
+## is the layer the predator spawned in; while that layer is HUNGRY or MIGRATING
+## its speed and aggro radius are multiplied, and while MIGRATING its patrol center
+## ([member Creature.home_position]) moves up into the next shallower layer (and
+## back home once the stock recovers), travelling there at full speed. The leave
+## distance scales with the aggro radius, so a display started at the larger radius
+## does not end at once in leave.
 ## Implements Story 003 (production/epics/abyss-hunter/story-003-species-ai-blood.md).
 
-enum State { PATROL, LURED, DISPLAY, CHARGE, RECOVER, LEAVE, FOLLOW_PREY, LAMP_SCARED }
+enum State { PATROL, LURED, DISPLAY, CHARGE, RECOVER, LEAVE, FOLLOW_PREY, LAMP_SCARED, MIGRATE, RETURN_HOME }
 
 const STATE_NAMES: Dictionary[State, StringName] = {
 	State.PATROL: &"patrol",
@@ -33,16 +43,28 @@ const STATE_NAMES: Dictionary[State, StringName] = {
 	State.LEAVE: &"leave",
 	State.FOLLOW_PREY: &"follow_prey",
 	State.LAMP_SCARED: &"lamp_scared",
+	State.MIGRATE: &"migrate",
+	State.RETURN_HOME: &"return_home",
 }
 
 var _state: State = State.PATROL
 var _state_time: float = 0.0
 ## Display length fixed when the display starts, so a commit mid-display does not jump.
 var _display_time: float = 0.0
+# Story 007: spawn patrol center and its layer, the layer hunted in now, and
+# whether it is still travelling to a patrol center the food chain moved.
+var _home_anchor: Vector2
+var _home_layer: int = 0
+var _hunt_layer: int = 0
+var _travelling: bool = false
 
 
 func _ready() -> void:
 	creature.set_behaviour(STATE_NAMES[_state])
+	_home_anchor = creature.home_position
+	if creature.context.population:
+		_home_layer = creature.context.population.get_layer_at(_home_anchor)
+		_hunt_layer = _home_layer
 
 
 func think(delta: float) -> void:
@@ -52,12 +74,23 @@ func think(delta: float) -> void:
 	var diver_active: bool = context.is_diver_active()
 	var diver_position: Vector2 = context.diver.global_position if context.diver else creature.global_position
 	var distance: float = creature.global_position.distance_to(diver_position)
+	var speed: float = species.speed
+	var aggro_scale: float = 1.0
+	var population: Population = context.population
+	if population:
+		speed *= population.get_speed_multiplier(_home_layer)
+		aggro_scale = population.get_aggro_multiplier(_home_layer)
+		var hunt_layer: int = population.get_hunt_layer(_home_layer)
+		if hunt_layer != _hunt_layer:
+			_hunt_layer = hunt_layer
+			creature.home_position = population.get_hunt_position(_home_anchor, hunt_layer)
+			_travelling = true
 	match _state:
-		State.PATROL, State.LURED, State.FOLLOW_PREY:
+		State.PATROL, State.LURED, State.FOLLOW_PREY, State.MIGRATE, State.RETURN_HOME:
 			if context.lamp_repels(creature):
 				_enter(State.LAMP_SCARED)
 				return
-			if diver_active and distance <= species.aggro_radius:
+			if diver_active and distance <= species.aggro_radius * aggro_scale:
 				_enter(State.DISPLAY if species.display_duration > 0.0 else State.CHARGE)
 				return
 			var target: Node2D = _nearest_lure()
@@ -66,25 +99,30 @@ func think(delta: float) -> void:
 				target = _nearest_lamp_prey()
 				next_state = State.FOLLOW_PREY
 			if target == null:
+				if _travelling and creature.global_position.distance_to(creature.home_position) > species.wander_radius:
+					_enter(State.MIGRATE if _hunt_layer != _home_layer else State.RETURN_HOME)
+					creature.steer(creature.global_position.direction_to(creature.home_position) * speed, delta)
+					return
+				_travelling = false
 				_enter(State.PATROL)
-				creature.steer(wander_velocity(delta), delta)
+				creature.steer(wander_velocity(delta, speed / species.speed), delta)
 				return
 			_enter(next_state)
 			var to_target: Vector2 = target.global_position - creature.global_position
 			var arrive: float = clampf(to_target.length() / species.lure_arrive_distance, 0.0, 1.0)
-			creature.steer(to_target.normalized() * species.speed * arrive, delta)
+			creature.steer(to_target.normalized() * speed * arrive, delta)
 		State.DISPLAY:
 			creature.face_toward(diver_position)
 			creature.steer(Vector2.ZERO, delta)
 			if not diver_active:
 				_enter(State.PATROL)
-			elif distance >= species.leave_distance:
+			elif distance >= species.leave_distance * aggro_scale:
 				_enter(State.LEAVE)
 			elif distance <= species.charge_distance or _state_time >= _display_time:
 				_enter(State.CHARGE)
 		State.CHARGE:
 			creature.face_toward(diver_position)
-			creature.velocity = creature.global_position.direction_to(diver_position) * species.speed * species.charge_speed_multiplier
+			creature.velocity = creature.global_position.direction_to(diver_position) * speed * species.charge_speed_multiplier
 			if diver_active and distance <= species.attack_reach:
 				context.diver.vitals.take_damage(species.damage)
 				creature.struck_diver.emit(creature, species.damage)
@@ -92,7 +130,7 @@ func think(delta: float) -> void:
 			elif not diver_active or _state_time >= species.charge_max_time:
 				_enter(State.RECOVER)
 		State.RECOVER, State.LEAVE, State.LAMP_SCARED:
-			creature.steer(diver_position.direction_to(creature.global_position) * species.speed, delta)
+			creature.steer(diver_position.direction_to(creature.global_position) * speed, delta)
 			if _state_time >= (species.recover_time if _state == State.RECOVER else species.leave_time):
 				_enter(State.PATROL)
 

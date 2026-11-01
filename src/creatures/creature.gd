@@ -111,6 +111,8 @@ func _ready() -> void:
 			_ai = PredatorAI.new()
 	_ai.creature = self
 	add_child(_ai)
+	if context.population:
+		context.population.register(self)
 	if species.glow_radius > 0.0:
 		_glow = GlowLight.new(species.glow_radius, species.glow_color, species.glow_energy)
 		add_child(_glow)

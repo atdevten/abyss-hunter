@@ -2,7 +2,8 @@ class_name VitalsHud
 extends Control
 ## Minimal HUD: an oxygen bar and a health bar bound to a [DiverVitals], and
 ## (Story 005) the encyclopedia progress line bound to an [Encyclopedia],
-## and (Story 006) the cargo and money bound to a [RunState].
+## and (Story 006) the cargo and money bound to a [RunState], and (Story 007) the
+## per-layer prey readout bound to a [Population].
 ##
 ## Usage:
 ## [codeblock]
@@ -11,6 +12,7 @@ extends Control
 ## hud.bind(diver.vitals)
 ## hud.bind_encyclopedia(encyclopedia)
 ## hud.bind_run_state(run_state)
+## hud.bind_population(population)
 ## [/codeblock]
 
 var _oxygen_bar: ProgressBar
@@ -19,6 +21,8 @@ var _encyclopedia_label: Label
 var _encyclopedia: Encyclopedia
 var _run_label: Label
 var _run: RunState
+var _prey_label: Label
+var _population: Population
 
 
 func _ready() -> void:
@@ -32,6 +36,8 @@ func _ready() -> void:
 	box.add_child(_encyclopedia_label)
 	_run_label = Label.new()
 	box.add_child(_run_label)
+	_prey_label = Label.new()
+	box.add_child(_prey_label)
 
 
 ## Connects the bars to [param vitals] and shows its current values.
@@ -55,6 +61,17 @@ func bind_run_state(run: RunState) -> void:
 	run.cargo_changed.connect(_update_run.unbind(2))
 	run.money_changed.connect(_update_run.unbind(1))
 	_update_run()
+
+
+## Shows [param population]'s prey stock and state per layer, kept up to date (Story 007).
+func bind_population(population: Population) -> void:
+	_population = population
+	population.prey_count_changed.connect(_update_prey.unbind(3))
+	_update_prey()
+
+
+func _update_prey() -> void:
+	_prey_label.text = _population.describe()
 
 
 func _update_run() -> void:
