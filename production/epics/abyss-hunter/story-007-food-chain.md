@@ -1,12 +1,12 @@
 # Story 007: Minimal food chain
 
 > **Epic**: abyss-hunter
-> **Status**: In Progress
+> **Status**: Complete
 > **Layer**: Feature
 > **Type**: Logic
 > **Estimate**: M
 > **Manifest Version**: N/A (minimal — no control manifest)
-> **Last Updated**: 2026-11-01
+> **Last Updated**: 2026-11-02
 
 ## Context
 
@@ -86,3 +86,10 @@ N/A (minimal — no control manifest)
 
 - Depends on: `production/epics/abyss-hunter/story-003-species-ai-blood.md`, `production/epics/abyss-hunter/story-006-boat-loop.md`
 - Unlocks: None
+
+## Completion Notes
+**Completed**: 2026-11-02
+**Criteria**: 7/7 passing (verified by console output from headless runs, a patrol-speed measurement and `readout.png`; not played by hand)
+**Deviations**: `leave_distance` is also scaled by the aggro multiplier (beyond the criterion's wording; without it a hungry shark gives up at once); the encyclopedia aggro ring keeps the base radius when a predator is hungry; only docking recovers prey, a death does not; the ecosystem numbers in `ecosystem_config.tres` are placeholders; prey is an abstract stock, not live fish; a predator's home layer is where it spawned, not a species field
+**Test Evidence**: waived at qa.level minimal; screenshot in `production/qa/evidence/story-007-food-chain/` (readout.png, stamp.txt)
+**Reviewed by**: self, no independent review
