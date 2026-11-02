@@ -94,7 +94,7 @@ func _physics_process(_delta: float) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	var key := event as InputEventKey
 	if key and key.pressed and not key.echo and key.physical_keycode == SHOP_KEY and state == State.AT_BOAT:
-		shop.show()
+		shop.open_at_boat()
 
 
 ## Ends the dive at the boat: commits the encyclopedia's pending halves (which may
@@ -116,7 +116,7 @@ func dock() -> void:
 func _on_diver_died(cause: DiverVitals.Cause) -> void:
 	var fish: int = run_state.lose_dive()
 	var halves: int = _encyclopedia.discard_pending()
-	_diver.global_position = global_position
+	_diver.global_position = Vector2(global_position.x, 0.0) # the surface is y = 0
 	_diver.velocity = Vector2.ZERO
 	_diver.vitals.start_dive()
 	state = State.AT_BOAT

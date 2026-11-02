@@ -122,6 +122,12 @@ func open_after_dive(fish_sold: int, money_earned: int, halves_committed: int) -
 	show()
 
 
+## Shows the shop between dives (opened at the boat with no dive just ended).
+func open_at_boat() -> void:
+	_report_label.text = "At the boat."
+	show()
+
+
 ## Closes the shop and lets the diver dive.
 func close_to_dive() -> void:
 	hide()

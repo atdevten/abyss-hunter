@@ -12,10 +12,10 @@
 
 | # | Story | Type | Status | ADR |
 |---|-------|------|--------|-----|
-| 001 | Swim, oxygen and health | Logic | Ready | N/A |
-| 002 | Harpoon gun and camera with flash | Logic | Ready | N/A |
-| 003 | Six species, three AI types and blood lure | Integration | Ready | N/A |
-| 004 | Three depth layers, visibility and lamp | Visual/Feel | Ready | N/A |
-| 005 | Encyclopedia and unlockable advantages | Integration | Ready | N/A |
-| 006 | Boat — sell, upgrade, respawn | Integration | Ready | N/A |
-| 007 | Minimal food chain | Logic | Ready | N/A |
+| 001 | Swim, oxygen and health | Logic | Complete | N/A |
+| 002 | Harpoon gun and camera with flash | Logic | Complete | N/A |
+| 003 | Six species, three AI types and blood lure | Integration | Complete | N/A |
+| 004 | Three depth layers, visibility and lamp | Visual/Feel | Complete | N/A |
+| 005 | Encyclopedia and unlockable advantages | Integration | Complete | N/A |
+| 006 | Boat — sell, upgrade, respawn | Integration | Complete | N/A |
+| 007 | Minimal food chain | Logic | Complete | N/A |

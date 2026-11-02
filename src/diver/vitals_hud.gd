@@ -32,12 +32,9 @@ func _ready() -> void:
 	add_child(box)
 	_oxygen_bar = _make_bar(box, Color.DEEP_SKY_BLUE)
 	_health_bar = _make_bar(box, Color.RED)
-	_encyclopedia_label = Label.new()
-	box.add_child(_encyclopedia_label)
-	_run_label = Label.new()
-	box.add_child(_run_label)
-	_prey_label = Label.new()
-	box.add_child(_prey_label)
+	_encyclopedia_label = _make_label(box)
+	_run_label = _make_label(box)
+	_prey_label = _make_label(box)
 
 
 ## Connects the bars to [param vitals] and shows its current values.
@@ -80,6 +77,15 @@ func _update_run() -> void:
 
 func _update_encyclopedia() -> void:
 	_encyclopedia_label.text = "Encyclopedia %d/%d  pending %d" % [_encyclopedia.completed_count(), _encyclopedia.book.entries.size(), _encyclopedia.pending_count()]
+
+
+# White text with a dark outline, readable over the bright surface water too.
+func _make_label(parent: Control) -> Label:
+	var label := Label.new()
+	label.add_theme_color_override("font_outline_color", Color.BLACK)
+	label.add_theme_constant_override("outline_size", 4)
+	parent.add_child(label)
+	return label
 
 
 func _make_bar(parent: Control, color: Color) -> ProgressBar:

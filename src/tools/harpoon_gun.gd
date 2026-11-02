@@ -35,6 +35,13 @@ func _unhandled_input(event: InputEvent) -> void:
 		fire_at(get_global_mouse_position())
 
 
+## Removes every harpoon of this gun still in flight, so a dive that just ended
+## (docked or died) cannot be credited with a hit that lands afterwards.
+func recall_harpoons() -> void:
+	for harpoon: Harpoon in find_children("*", "Harpoon", false, false):
+		harpoon.queue_free()
+
+
 ## True when the reload time since the last shot has passed.
 func is_ready() -> bool:
 	return _reload_left <= 0.0

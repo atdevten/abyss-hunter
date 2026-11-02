@@ -265,6 +265,9 @@ func _ready() -> void:
 	add_child(_boat)
 	_boat.bind(_diver, _lamp, tools_config, _encyclopedia, _run)
 	_boat.dive_started.connect(func() -> void: _log("boat: dive started"))
+	# A harpoon still in flight when a dive ends must not credit the next dive.
+	_boat.docked.connect(_gun.recall_harpoons.unbind(3))
+	_boat.respawned.connect(_gun.recall_harpoons.unbind(3))
 	_boat.docked.connect(func(fish: int, earned: int, halves: int) -> void:
 		_auto_dive_depth = INF
 		_log("boat: docked - sold %d fish for $%d (money $%d), committed %d halves (%d/%d complete), vitals refilled" % [fish, earned, _run.money, halves, _encyclopedia.completed_count(), ENCYCLOPEDIA_BOOK.entries.size()])
@@ -371,6 +374,11 @@ func _record_spec(spec: String) -> void:
 		return
 	for item in spec.split(",", false):
 		var parts: PackedStringArray = item.split(":")
+		if parts.size() < 2:
+			parts.append("both") # `<species>` alone means both halves
+		if not UNLOCK_HALVES.has(parts[1]):
+			push_warning("--unlock/--pending: ignoring '%s' (half must be one of %s)" % [item, UNLOCK_HALVES.keys()])
+			continue
 		var ids: Array = ENCYCLOPEDIA_BOOK.entries.map(func(entry: EncyclopediaEntry) -> StringName: return entry.species_id) if parts[0] == "all" else [StringName(parts[0])]
 		for species_id: StringName in ids:
 			for half: Encyclopedia.Half in UNLOCK_HALVES["both" if parts[0] == "all" else parts[1]]:
