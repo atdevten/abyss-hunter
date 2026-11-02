@@ -123,6 +123,11 @@ func _physics_process(delta: float) -> void:
 		facing = signf(velocity.x)
 	_ai.think(delta)
 	position += velocity * delta
+	# Creatures live in the water: the surface is y = 0, so the body stays below it.
+	var min_y: float = species.body_size.y * 0.5
+	if global_position.y < min_y:
+		global_position.y = min_y
+		velocity.y = maxf(velocity.y, 0.0)
 	_flash_left = maxf(_flash_left - delta, 0.0)
 	if _glow:
 		_glow.position = Vector2(species.glow_offset.x * facing, species.glow_offset.y)
