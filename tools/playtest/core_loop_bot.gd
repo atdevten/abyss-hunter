@@ -10,6 +10,8 @@ extends SceneTree
 
 const PIXELS_PER_METER := 16.0
 const FRAME := 1.0 / 60.0
+## How far below the surface (px) the bot keeps the diver while not heading home.
+const MIN_SWIM_Y := 48.0
 ## Fixed seed for the global random generator (creature wander targets use randf()),
 ## so every run plays the same game and a FAIL is reproducible.
 const BOT_SEED := 6 # covers every check (no skips); --seed=<n> tries others
@@ -261,8 +263,12 @@ func _wait_until(done: Callable, timeout: float) -> bool:
 	return done.call()
 
 
-## Steers the diver one frame toward [param target] with WASD.
-func _steer_toward(target: Vector2, stop_distance: float) -> void:
+## Steers the diver one frame toward [param target] with WASD. Unless
+## [param may_surface], the diver stays [constant MIN_SWIM_Y] below the surface, so
+## chasing a creature near the boat never docks by accident (the shop would freeze it).
+func _steer_toward(target: Vector2, stop_distance: float, may_surface: bool = false) -> void:
+	if not may_surface:
+		target.y = maxf(target.y, MIN_SWIM_Y)
 	var to: Vector2 = target - _diver.global_position
 	var go := to.length() > stop_distance
 	_set_key(KEY_D, go and to.x > 8.0)
@@ -281,7 +287,7 @@ func _return_to_boat(timeout: float) -> void:
 	var docks_before: int = _docks
 	var t := 0.0
 	while t < timeout and _docks == docks_before:
-		_steer_toward(Vector2(_boat.global_position.x, 0.0), 4.0)
+		_steer_toward(Vector2(_boat.global_position.x, 0.0), 4.0, true)
 		await physics_frame
 		t += FRAME
 	await _release_all()
@@ -310,7 +316,7 @@ func _back_off_until(creature: Creature, behaviour: StringName, timeout: float) 
 	var t := 0.0
 	while t < timeout and is_instance_valid(creature) and creature.behaviour != behaviour:
 		var away: Vector2 = _diver.global_position + (_diver.global_position - creature.global_position).normalized() * 200.0
-		away.y = maxf(away.y, 40.0)
+		away.y = maxf(away.y, MIN_SWIM_Y)
 		_steer_toward(away, 0.0)
 		await physics_frame
 		t += FRAME
