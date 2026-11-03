@@ -10,8 +10,8 @@ extends Node2D
 ## Story 006: the boat ([Boat]) at the surface ends a dive when the diver swims back
 ## to it (commits pending halves, sells the cargo, refills, opens the shop); death
 ## respawns the diver there, losing the cargo and pending halves. Prints boat events.
-## Keys: L lamp, R white/red lamp (once bought), E encyclopedia screen, B shop (at the
-## boat); in the shop 1/2/3 buy, Space/Enter dive.
+## Keys: L lamp, R white/red lamp (once bought), E encyclopedia screen, C collection
+## screen, B shop (at the boat); in the shop 1/2/3 buy, Space/Enter dive.
 ## Debug user args (after `--`):
 ##   --start-depth=<meters>   start the dive below the surface
 ##   --auto-fire              fire and photograph at the shark whenever reloaded (aims
@@ -49,6 +49,12 @@ extends Node2D
 ## The HUD shows the readout; prints stock changes, layer states and dock recovery.
 ## Creature behaviour lines carry the depth, so migrate / return_home show the move.
 ##   --prey=<layer>:<count>,...  prey stock at the start, e.g. --prey=bright:2,dim:0
+## Story 008 collection ([Collection], C toggles its screen): a kill records a pending
+## catch at the creature's depth, a photo a pending photo; docking commits them, death
+## discards them. Prints catch/photo recorded, committed N, discarded N.
+##   --collection=<species_id>:<caught>:<photos>:<depth_m>,...  committed at the start
+##   --collection-pending=<same spec>  recorded but not yet brought to the boat
+##   --show-collection        open the collection screen at the start
 
 const CREATURE_SCENE: PackedScene = preload("res://src/creatures/creature.tscn")
 const SHARK: SpeciesData = preload("res://src/creatures/species/grey_reef_shark.tres")
@@ -60,6 +66,7 @@ const GIANT_SQUID: SpeciesData = preload("res://src/creatures/species/giant_squi
 const OCEAN_SCENE: PackedScene = preload("res://src/world/ocean.tscn")
 const ENCYCLOPEDIA_BOOK: EncyclopediaBook = preload("res://src/encyclopedia/encyclopedia_book.tres")
 const ENCYCLOPEDIA_SCREEN_SCENE: PackedScene = preload("res://src/encyclopedia/encyclopedia_screen.tscn")
+const COLLECTION_SCREEN_SCENE: PackedScene = preload("res://src/collection/collection_screen.tscn")
 const BOAT_SCENE: PackedScene = preload("res://src/boat/boat.tscn")
 const UPGRADES: UpgradesConfig = preload("res://src/boat/upgrades.tres")
 const ECOSYSTEM: EcosystemConfig = preload("res://src/ecosystem/ecosystem_config.tres")
@@ -127,6 +134,7 @@ var _boat: Boat
 var _auto_dive_depth: float = INF
 var _auto_dive_rising: bool = false
 var _population: Population
+var _collection: Collection
 
 
 func _ready() -> void:
@@ -137,6 +145,10 @@ func _ready() -> void:
 	_context = CreatureContext.new(_diver)
 	_encyclopedia = Encyclopedia.new(ENCYCLOPEDIA_BOOK)
 	_context.encyclopedia = _encyclopedia
+	_collection = Collection.new(ENCYCLOPEDIA_BOOK)
+	var collection_spec: String = ""
+	var collection_pending_spec: String = ""
+	var show_collection := false
 	var unlock_spec: String = "none"
 	var pending_spec: String = "none"
 	var show_encyclopedia := false
@@ -193,6 +205,12 @@ func _ready() -> void:
 			_auto_dive_depth = arg.trim_prefix("--auto-dive=").to_float()
 		elif arg.begins_with("--prey="):
 			prey_spec = arg.trim_prefix("--prey=")
+		elif arg.begins_with("--collection="):
+			collection_spec = arg.trim_prefix("--collection=")
+		elif arg.begins_with("--collection-pending="):
+			collection_pending_spec = arg.trim_prefix("--collection-pending=")
+		elif arg == "--show-collection":
+			show_collection = true
 	_population = Population.new(ECOSYSTEM, _ocean.config, _diver.config.pixels_per_meter)
 	_context.population = _population
 	var layer_names: Array = _ocean.config.layers.map(func(layer: LayerData) -> String: return layer.display_name)
@@ -243,6 +261,9 @@ func _ready() -> void:
 	var screen: EncyclopediaScreen = ENCYCLOPEDIA_SCREEN_SCENE.instantiate()
 	layer.add_child(screen)
 	screen.bind(_encyclopedia)
+	var collection_screen: CollectionScreen = COLLECTION_SCREEN_SCENE.instantiate()
+	layer.add_child(collection_screen)
+	collection_screen.bind(_collection, _ocean.config)
 	_encyclopedia.completed.connect(func() -> void:
 		_log("encyclopedia completed %d/%d: WIN - %s" % [_encyclopedia.completed_count(), ENCYCLOPEDIA_BOOK.entries.size(), ENCYCLOPEDIA_BOOK.win_message]))
 	_diver.vitals.diver_died.connect(func(cause: DiverVitals.Cause) -> void:
@@ -255,7 +276,9 @@ func _ready() -> void:
 	_camera_tool.photo_taken.connect(func(species_id: StringName) -> void:
 		_log("photo_taken: %s" % species_id)
 		if _encyclopedia.record_photo(species_id):
-			_log("encyclopedia: photo recorded, %s behaviour half pending" % species_id))
+			_log("encyclopedia: photo recorded, %s behaviour half pending" % species_id)
+		if _collection.record_photo(species_id):
+			_log("collection: photo recorded pending, %s %d (+%d pending)" % [species_id, _collection.get_photos(species_id), _collection.get_pending_photos(species_id)]))
 	_camera_tool.flash_fired.connect(func(flash_position: Vector2) -> void:
 		_log("flash_fired at %s" % flash_position)
 		_ocean.spawn_flash_lure(flash_position))
@@ -273,6 +296,10 @@ func _ready() -> void:
 		_log("boat: docked - sold %d fish for $%d (money $%d), committed %d halves (%d/%d complete), vitals refilled" % [fish, earned, _run.money, halves, _encyclopedia.completed_count(), ENCYCLOPEDIA_BOOK.entries.size()])
 		_log("food chain: prey recovers at the boat")
 		_population.recover())
+	_boat.docked.connect(func(_fish: int, _earned: int, _halves: int) -> void:
+		_log("collection: committed %d catches and photos (%d/%d species met, %d fish caught)" % [_collection.commit_pending(), _collection.met_count(), ENCYCLOPEDIA_BOOK.entries.size(), _collection.total_caught()]))
+	_boat.respawned.connect(func(_cause: DiverVitals.Cause, _fish: int, _halves: int) -> void:
+		_log("collection: discarded %d pending catches and photos" % _collection.discard_pending()))
 	_boat.respawned.connect(func(cause: DiverVitals.Cause, fish: int, halves: int) -> void:
 		_auto_dive_depth = INF
 		_log("boat: died (%s) -> respawned on the boat; cargo lost %d fish, discarded %d pending halves; kept money $%d and upgrades" % [DiverVitals.Cause.keys()[cause], fish, halves, _run.money]))
@@ -283,6 +310,10 @@ func _ready() -> void:
 		_record_spec(unlock_spec)
 		_log("encyclopedia: --unlock committed %d halves" % _encyclopedia.commit_pending())
 	_record_spec(pending_spec)
+	if collection_spec != "":
+		_record_collection_spec(collection_spec)
+		_log("collection: --collection committed %d catches and photos" % _collection.commit_pending())
+	_record_collection_spec(collection_pending_spec)
 	_run.add_money(money)
 	for item in upgrades_spec.split(",", false):
 		var parts: PackedStringArray = item.split(":")
@@ -294,6 +325,7 @@ func _ready() -> void:
 	if show_shop:
 		_boat.dock()
 	screen.visible = screen.visible or show_encyclopedia
+	collection_screen.visible = show_collection
 	match _demo:
 		"leave", "charge", "hold":
 			_demo_shark = _spawn(SHARK, DEMO_SHARK_OFFSET, "Shark")
@@ -388,6 +420,20 @@ func _record_spec(spec: String) -> void:
 					_encyclopedia.record_kill(species_id)
 
 
+## Records the catches and photos named by a --collection / --collection-pending spec
+## (see the header), so they become pending.
+func _record_collection_spec(spec: String) -> void:
+	for item in spec.split(",", false):
+		var parts: PackedStringArray = item.split(":")
+		if parts.size() != 4:
+			push_warning("--collection: ignoring '%s' (expected <species_id>:<caught>:<photos>:<depth_m>)" % item)
+			continue
+		for i in parts[1].to_int():
+			_collection.record_catch(StringName(parts[0]), parts[3].to_float())
+		for i in parts[2].to_int():
+			_collection.record_photo(StringName(parts[0]))
+
+
 func _spawn(species: SpeciesData, offset: Vector2, creature_name: String) -> Creature:
 	var creature: Creature = CREATURE_SCENE.instantiate()
 	creature.species = species
@@ -409,6 +455,9 @@ func _spawn(species: SpeciesData, offset: Vector2, creature_name: String) -> Cre
 		# Only the harpoon calls take_damage, so every creature death is a kill.
 		if _encyclopedia.record_kill(who.species_id):
 			_log("encyclopedia: kill recorded, %s weak spot half pending" % who.species_id)
+		var depth: float = who.global_position.y / _diver.config.pixels_per_meter
+		if _collection.record_catch(who.species_id, depth):
+			_log("collection: catch recorded pending, %s at %.1f m (%d +%d pending)" % [who.species_id, depth, _collection.get_caught(who.species_id), _collection.get_pending_caught(who.species_id)])
 		_run.add_cargo(who.species)
 		_log("cargo: %s added (%d fish, worth $%d)" % [who.species_id, _run.cargo.size(), _run.get_cargo_value()]))
 	add_child(creature)
