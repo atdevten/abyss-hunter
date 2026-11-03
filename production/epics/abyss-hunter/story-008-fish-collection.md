@@ -1,12 +1,12 @@
 # Story 008: Fish collection
 
 > **Epic**: abyss-hunter
-> **Status**: In Progress
+> **Status**: Complete
 > **Layer**: Feature
 > **Type**: Integration
 > **Estimate**: M
 > **Manifest Version**: N/A (minimal — no control manifest)
-> **Last Updated**: 2026-11-02
+> **Last Updated**: 2026-11-03
 
 ## Context
 
@@ -86,3 +86,10 @@ N/A (minimal — no control manifest)
 
 - Depends on: `production/epics/abyss-hunter/story-003-species-ai-blood.md`, `production/epics/abyss-hunter/story-005-encyclopedia.md`, `production/epics/abyss-hunter/story-006-boat-loop.md`
 - Unlocks: None
+
+## Completion Notes
+**Completed**: 2026-11-03
+**Criteria**: 9/9 passing (AC-4 confirmed by hand play; AC-2/3 by console output from headless runs; AC-5/6/7/9 by `screen.png`)
+**Deviations**: A species with only pending catches or photos keeps its name hidden ("???") until the boat, while its pending numbers show; the C and E screens can be open at once and overlap. The story extends the epic beyond the brief's 7 MVP features (user request 2026-11-02)
+**Test Evidence**: waived at qa.level minimal; screenshot in `production/qa/evidence/story-008-fish-collection/` (screen.png, stamp.txt)
+**Reviewed by**: self, no independent review

@@ -19,4 +19,4 @@
 | 005 | Encyclopedia and unlockable advantages | Integration | Complete | N/A |
 | 006 | Boat — sell, upgrade, respawn | Integration | Complete | N/A |
 | 007 | Minimal food chain | Logic | Complete | N/A |
-| 008 | Fish collection | Integration | Ready | N/A |
+| 008 | Fish collection | Integration | Complete | N/A |
