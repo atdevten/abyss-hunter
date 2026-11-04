@@ -20,3 +20,9 @@
 | 006 | Boat — sell, upgrade, respawn | Integration | Complete | N/A |
 | 007 | Minimal food chain | Logic | Complete | N/A |
 | 008 | Fish collection | Integration | Complete | N/A |
+| 009 | Pixel-art project settings | Visual/Feel | Complete | N/A |
+| 010 | Bioluminescence as additive sprites | Visual/Feel | Ready | N/A |
+| 011 | Knowledge rings overlay | UI | Ready | N/A |
+| 012 | HUD and screen readability | UI | Ready | N/A |
+| 013 | Creature and diver sprites | Visual/Feel | Ready | N/A |
+| 014 | In-game how-to-play screen | UI | Complete | N/A |
