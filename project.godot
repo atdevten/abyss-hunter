@@ -7,6 +7,31 @@ config/features=PackedStringArray("4.7", "GL Compatibility")
 ; The dive test scene until Story 006 adds the real game scene.
 run/main_scene="res://src/diver/dive_test.tscn"
 
+[display]
+
+; Story 009 / art bible §8: 1 art px = 1 world px at 1152x648, scaled smoothly
+; (non-integer) to the window. viewport size and aspect "keep" equal Godot's
+; defaults and are written out to pin them.
+window/size/viewport_width=1152
+window/size/viewport_height=648
+window/stretch/mode="canvas_items"
+window/stretch/aspect="keep"
+window/stretch/scale_mode="fractional"
+
+[importer_defaults]
+
+; Story 009 / art bible §8: pixel-art PNGs import Lossless, no mipmaps, and never
+; switch to VRAM compression when used in 3D.
+texture={
+"compress/mode": 0,
+"detect_3d/compress_to": 0,
+"mipmaps/generate": false
+}
+
 [rendering]
 
 renderer/rendering_method="gl_compatibility"
+; Story 009 / art bible §8: Nearest by default (pixel art); light gradients override
+; to Linear per node (src/world/glow_light.gd).
+textures/canvas_textures/default_texture_filter=0
+2d/snap/snap_2d_transforms_to_pixel=true

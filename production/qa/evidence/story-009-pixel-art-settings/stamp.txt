@@ -1,0 +1,2 @@
+Reviewed-Content-Hash: project.godot b476b0318b507b5a2eaeabf9597b2b471a07c569
+Reviewed-Content-Hash: src/world/glow_light.gd 92891f48f9982804b8fbcbde25286f8baec1c89e

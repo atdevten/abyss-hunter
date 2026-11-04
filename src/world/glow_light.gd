@@ -30,6 +30,11 @@ func _init(radius: float = 64.0, light_color: Color = Color.WHITE, light_energy:
 		gradient.set_color(1, Color(1.0, 1.0, 1.0, 0.0))
 		_shared_texture.gradient = gradient
 	texture = _shared_texture
+	# Story 009 / art bible §8: the project default filter is Nearest (pixel art); the
+	# falloff gradient must stay Linear. Measured on 4.7.2 Compatibility: Light2D
+	# textures already sample Linear whatever the project default or this property
+	# (identical frames with and without it), so this states the intent explicitly.
+	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	set_radius(radius)
 	color = light_color
 	energy = light_energy
