@@ -1,0 +1,93 @@
+[gd_resource type="Resource" script_class="HelpContent" load_steps=18 format=3]
+
+[ext_resource type="Script" path="res://src/help/help_content.gd" id="1"]
+[ext_resource type="Script" path="res://src/help/help_section.gd" id="2"]
+[ext_resource type="Script" path="res://src/help/help_control.gd" id="3"]
+
+[sub_resource type="Resource" id="c_swim"]
+script = ExtResource("3")
+keys = Array[String](["W", "A", "S", "D"])
+description = "Swim"
+
+[sub_resource type="Resource" id="c_harpoon"]
+script = ExtResource("3")
+keys = Array[String](["mouse_left"])
+description = "Harpoon"
+
+[sub_resource type="Resource" id="c_photo"]
+script = ExtResource("3")
+keys = Array[String](["mouse_right"])
+description = "Photo"
+
+[sub_resource type="Resource" id="c_lamp"]
+script = ExtResource("3")
+keys = Array[String](["L"])
+description = "Lamp on / off"
+
+[sub_resource type="Resource" id="c_red"]
+script = ExtResource("3")
+keys = Array[String](["R"])
+description = "White / red lamp (once the red lamp is bought)"
+
+[sub_resource type="Resource" id="c_encyclopedia"]
+script = ExtResource("3")
+keys = Array[String](["E"])
+description = "Encyclopedia"
+
+[sub_resource type="Resource" id="c_collection"]
+script = ExtResource("3")
+keys = Array[String](["C"])
+description = "Collection"
+
+[sub_resource type="Resource" id="c_shop"]
+script = ExtResource("3")
+keys = Array[String](["B"])
+description = "Shop (at the boat)"
+
+[sub_resource type="Resource" id="c_buy"]
+script = ExtResource("3")
+keys = Array[String](["1", "2", "3"])
+description = "Buy upgrades (in the shop)"
+
+[sub_resource type="Resource" id="c_dive"]
+script = ExtResource("3")
+keys = Array[String](["space"])
+description = "Dive / close the shop"
+
+[sub_resource type="Resource" id="c_help"]
+script = ExtResource("3")
+keys = Array[String](["H", "F1"])
+description = "This help"
+
+[sub_resource type="Resource" id="s_goal"]
+script = ExtResource("2")
+heading = "Goal"
+lines = Array[String](["Complete the encyclopedia: photograph and hunt all 6 species and bring them back to the boat."])
+highlight = true
+
+[sub_resource type="Resource" id="s_loop"]
+script = ExtResource("2")
+heading = "The loop"
+lines = Array[String](["1. Dive.", "2. Hunt fish for money and to learn their weak spots.", "3. Photograph creatures to learn their behaviour.", "4. Surface at the boat: sell fish, unlock entries.", "5. Buy upgrades, then dive deeper."])
+
+[sub_resource type="Resource" id="s_warnings"]
+script = ExtResource("2")
+heading = "Warnings"
+lines = Array[String](["- Oxygen drains faster the deeper you go.", "- Blood and the camera flash attract predators.", "- Dying loses the fish and photos you carry.", "- When a shark arches its back and lifts its snout, back off."])
+
+[resource]
+script = ExtResource("1")
+title = "How to play"
+controls_heading = "Controls"
+controls = Array[ExtResource("3")]([SubResource("c_swim"), SubResource("c_harpoon"), SubResource("c_photo"), SubResource("c_lamp"), SubResource("c_red"), SubResource("c_encyclopedia"), SubResource("c_collection"), SubResource("c_shop"), SubResource("c_buy"), SubResource("c_dive"), SubResource("c_help")])
+sections = Array[ExtResource("2")]([SubResource("s_goal"), SubResource("s_loop"), SubResource("s_warnings")])
+footer_keys = Array[String](["H", "F1"])
+footer_key_separator = "/"
+footer_text = "close"
+hint_key = "H"
+hint_text = "How to play"
+key_labels = Dictionary[String, String]({
+"mouse_left": "Left click",
+"mouse_right": "Right click",
+"space": "Space"
+})

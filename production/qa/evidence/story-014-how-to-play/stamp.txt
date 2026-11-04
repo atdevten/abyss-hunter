@@ -1,0 +1,8 @@
+Reviewed-Content-Hash: src/help/help_screen.gd 348cc109a530f8cbd4d8a8bad4c816c887b70e25
+Reviewed-Content-Hash: src/help/help_screen.tscn 3cc9d4e1dbda544c4606c65c797b963b252cd9c9
+Reviewed-Content-Hash: src/help/help_content.gd 3ed116229a643cbcd63d4a8fe570e93c761d1dbc
+Reviewed-Content-Hash: src/help/help_control.gd c88b43abe9321d1b3f01be986c05a792e797b472
+Reviewed-Content-Hash: src/help/help_section.gd a06ccf14039d3819aeb5c48d2b8285110c39600a
+Reviewed-Content-Hash: src/help/help_content.tres 70cfb2e8869c8f56fd2bac37e14b41ea1b2eaa8d
+Reviewed-Content-Hash: src/diver/dive_test.gd 851b5fa4a266e28670ec085d6a3a09c35d3ac39c
+Reviewed-Content-Hash: tools/playtest/core_loop_bot.gd 966272ee250b0fdc5bb7c4eacb8258a49dabc743

@@ -55,6 +55,12 @@ extends Node2D
 ##   --collection=<species_id>:<caught>:<photos>:<depth_m>,...  committed at the start
 ##   --collection-pending=<same spec>  recorded but not yet brought to the boat
 ##   --show-collection        open the collection screen at the start
+## Story 014 how-to-play ([HelpScreen], H / F1 toggles it and pauses the game): it opens
+## by itself on the first launch (no help_seen=true in user://settings.cfg); closing it
+## writes the flag. Opening it closes the encyclopedia, collection and shop screens.
+##   --show-help              open the help screen at the start, even when already seen
+##   --no-help                never open it by itself and never write the flag (the
+##                            playtest bot sets [member auto_open_help] = false instead)
 
 const CREATURE_SCENE: PackedScene = preload("res://src/creatures/creature.tscn")
 const SHARK: SpeciesData = preload("res://src/creatures/species/grey_reef_shark.tres")
@@ -67,6 +73,9 @@ const OCEAN_SCENE: PackedScene = preload("res://src/world/ocean.tscn")
 const ENCYCLOPEDIA_BOOK: EncyclopediaBook = preload("res://src/encyclopedia/encyclopedia_book.tres")
 const ENCYCLOPEDIA_SCREEN_SCENE: PackedScene = preload("res://src/encyclopedia/encyclopedia_screen.tscn")
 const COLLECTION_SCREEN_SCENE: PackedScene = preload("res://src/collection/collection_screen.tscn")
+const HELP_SCREEN_SCENE: PackedScene = preload("res://src/help/help_screen.tscn")
+## CanvasLayer of the help screen: above the HUD and screens (1) and the shop (2).
+const HELP_LAYER := 10
 const BOAT_SCENE: PackedScene = preload("res://src/boat/boat.tscn")
 const UPGRADES: UpgradesConfig = preload("res://src/boat/upgrades.tres")
 const ECOSYSTEM: EcosystemConfig = preload("res://src/ecosystem/ecosystem_config.tres")
@@ -111,6 +120,10 @@ const DARK_LANTERNFISH_OFFSET := Vector2(190.0, -150.0)
 const FLASH_DEMO_DELAY := 0.5
 const FLASH_DEMO_OFFSET := Vector2(0.0, 350.0)
 
+## False: the help screen never opens by itself at the start and never writes the seen
+## flag, like --no-help. Set it before adding the scene to the tree (the playtest bot).
+var auto_open_help: bool = true
+
 var _diver: Diver
 var _gun: HarpoonGun
 var _camera_tool: CameraTool
@@ -135,6 +148,7 @@ var _auto_dive_depth: float = INF
 var _auto_dive_rising: bool = false
 var _population: Population
 var _collection: Collection
+var _help: HelpScreen
 
 
 func _ready() -> void:
@@ -165,6 +179,8 @@ func _ready() -> void:
 	var cargo_spec: String = ""
 	var show_shop := false
 	var prey_spec: String = ""
+	var show_help := false
+	var no_help := false
 	# Debug user args, see the header.
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--start-depth="):
@@ -211,6 +227,10 @@ func _ready() -> void:
 			collection_pending_spec = arg.trim_prefix("--collection-pending=")
 		elif arg == "--show-collection":
 			show_collection = true
+		elif arg == "--show-help":
+			show_help = true
+		elif arg == "--no-help":
+			no_help = true
 	_population = Population.new(ECOSYSTEM, _ocean.config, _diver.config.pixels_per_meter)
 	_context.population = _population
 	var layer_names: Array = _ocean.config.layers.map(func(layer: LayerData) -> String: return layer.display_name)
@@ -326,6 +346,23 @@ func _ready() -> void:
 		_boat.dock()
 	screen.visible = screen.visible or show_encyclopedia
 	collection_screen.visible = show_collection
+	_help = HELP_SCREEN_SCENE.instantiate()
+	_help.remember_seen = auto_open_help and not no_help
+	var help_layer := CanvasLayer.new()
+	help_layer.layer = HELP_LAYER
+	add_child(help_layer)
+	help_layer.add_child(_help)
+	# At most one modal panel: the help closes the others. The shop is hidden, not
+	# close_to_dive(): no dive_requested; the boat unfreezes the diver and the pause holds it.
+	_help.opened.connect(func() -> void:
+		screen.hide()
+		collection_screen.hide()
+		_boat.shop.hide()
+		_log("help: opened, game paused"))
+	_help.closed.connect(func() -> void:
+		_log("help: closed, game resumed (seen flag in %s: %s)" % [_help.settings_path, _help.is_seen()]))
+	if show_help or (auto_open_help and not no_help and not _help.is_seen()):
+		_help.open()
 	match _demo:
 		"leave", "charge", "hold":
 			_demo_shark = _spawn(SHARK, DEMO_SHARK_OFFSET, "Shark")

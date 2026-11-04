@@ -7,6 +7,8 @@ extends SceneTree
 ## Run from the project root:
 ##   godot --headless --path . --fixed-fps 60 -s res://tools/playtest/core_loop_bot.gd
 ## A windowed run (drop --headless) shows the bot playing.
+## The bot turns off the first-launch how-to-play screen itself (Story 014: it would
+## pause the game) and never writes user://settings.cfg, so no `-- --no-help` is needed.
 
 const PIXELS_PER_METER := 16.0
 const FRAME := 1.0 / 60.0
@@ -43,6 +45,7 @@ func _initialize() -> void:
 	print("PLAYTEST SEED %d" % run_seed)
 	seed(run_seed)
 	_scene = load("res://src/diver/dive_test.tscn").instantiate()
+	_scene.set("auto_open_help", false) # the first-launch help would pause the game
 	root.add_child(_scene)
 	await physics_frame
 	_diver = _scene.get("_diver")
